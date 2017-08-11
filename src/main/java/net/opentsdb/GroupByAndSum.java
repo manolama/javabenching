@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -34,9 +36,11 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.google.common.collect.Lists;
+import com.stumbleupon.async.Deferred;
 
 import net.opentsdb.data.MergedTimeSeriesId;
 import net.opentsdb.data.SimpleStringTimeSeriesId;
@@ -65,7 +69,7 @@ public class GroupByAndSum {
   public static class Context
   {
     public List<TS> source;
-    
+    public ExecutorService pool = Executors.newCachedThreadPool();
     @Setup
     public void setup() {
       int tagv = 0;
@@ -79,6 +83,12 @@ public class GroupByAndSum {
       }
       Collections.shuffle(source);
     }
+    
+    @TearDown
+    public void tearDown() {
+      pool.shutdown();
+    }
+    
   }
 
   @Benchmark
@@ -174,6 +184,82 @@ public class GroupByAndSum {
       }
       
       results.add(times);
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public static void runTraditionalParallel(Context context, Blackhole blackHole) {
+    // group by
+    ByteMap<List<TS>> grouped = new ByteMap<List<TS>>();
+    for (final TS t : context.source) {
+      List<TS> l = grouped.get(t.id.tags().get(KEY));
+      if (l == null) {
+        l = Lists.newArrayList();
+        grouped.put(t.id.tags().get(KEY), l);
+      }
+      l.add(t);
+    }
+    
+    class Summer implements Runnable {
+      final List<TS> series;
+      final List<TS> accumulator;
+      final Deferred<Object> done;
+      
+      public Summer(List<TS> series, final List<TS> accumulator) {
+        this.series = series;
+        this.accumulator = accumulator;
+        done = new Deferred<Object>();
+      }
+      
+      @Override
+      public void run() {
+        MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
+        Iterator<DP>[] its = new Iterator[series.size()];
+        int x = 0;
+        for (final TS t : series) {
+          id.addSeries(t.id);
+          its[x++] = t.iterator();
+        }
+        
+        TS times = new TS(id.build());
+        double[] vals = new double[series.size()];
+        while (its[0].hasNext()) {
+          DP dp = its[0].next();
+          vals[0] = dp.getV();
+          
+          for (int i = 1; i < series.size(); i++) {
+            vals[i] = its[i].next().getV();
+          }
+          
+          double sum = 0;
+          for (double v : vals) {
+            sum += v;
+          }
+          
+          times.addDp(dp.getTS(), sum);
+        }
+        accumulator.add(times);
+        done.callback(null);
+      }
+      
+    }
+    
+    List<TS> results = Collections.synchronizedList(Lists.newArrayList());
+    List<Deferred<Object>> deferreds = Lists.newArrayList();
+    for (final List<TS> l : grouped.values()) {
+      final Summer summer = new Summer(l, results);
+      context.pool.submit(summer);
+      deferreds.add(summer.done);
+    }
+    try {
+      Deferred.group(deferreds).join();
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
     }
     blackHole.consume(results);
   }

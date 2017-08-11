@@ -17,14 +17,23 @@ package net.opentsdb;
 
 import java.util.concurrent.TimeUnit;
 
+import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import net.opentsdb.GroupByAndSum.Context;
+
 public class Benchmarks {
 
   public static void main(String[] args) {
+//    if (true) {
+//      Context ctx = new Context();
+//      ctx.setup();
+//      GroupByAndSum.runTraditionalParallel(ctx, null);
+//    }
+    
     Options options = new OptionsBuilder()
         .include(GroupByAndSum.class.getSimpleName())
         .forks(1)
