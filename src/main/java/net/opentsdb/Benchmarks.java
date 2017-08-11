@@ -18,6 +18,7 @@ package net.opentsdb;
 import java.util.concurrent.TimeUnit;
 
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.profile.GCProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -40,6 +41,7 @@ public class Benchmarks {
         .warmupIterations(5)
         .measurementIterations(10)
         .timeUnit(TimeUnit.MILLISECONDS)
+        .addProfiler(GCProfiler.class)
         .build();
     try {
       new Runner(options).run();
