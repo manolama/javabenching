@@ -15,6 +15,8 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import com.google.common.collect.Lists;
 
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import net.opentsdb.utils.Bytes;
 
 /**
@@ -36,6 +38,8 @@ public class SimDTest {
     public final List<Double> ldvalues = Lists.newArrayListWithCapacity(SIZE);
     public final MyDP[] ldps = new MyDP[SIZE];
     public final MyDP[] ddps = new MyDP[SIZE];
+    public final LongArrayList full = new LongArrayList(SIZE);
+    public final DoubleArrayList fudl = new DoubleArrayList(SIZE);
      
     @Setup
     public void setup()
@@ -45,9 +49,11 @@ public class SimDTest {
         values[i] = random.nextLong();
         lvalues.add(values[i]);
         ldps[i] = new MyDP(values[i]);
+        full.add(values[i]);
         dvalues[i] = random.nextDouble();
         ldvalues.add(dvalues[i]);
         ddps[i] = new MyDP(dvalues[i]);
+        fudl.add(dvalues[i]);
       }
     }
   }
@@ -116,6 +122,28 @@ public class SimDTest {
       } else {
         results[i] = new MyDP(context.ddps[i].getLong() + 1);
       }
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myIntegerFastUtilIncrement(Context context, Blackhole blackHole)
+  {
+    // sucks
+    final LongArrayList results = new LongArrayList(SIZE);
+    for (long i : context.full) {
+      results.add(i + 1);
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myDoubleFastUtilIncrement(Context context, Blackhole blackHole)
+  {
+    // sucks
+    final DoubleArrayList results = new DoubleArrayList(SIZE);
+    for (double i : context.fudl) {
+      results.add(i + 1);
     }
     blackHole.consume(results);
   }

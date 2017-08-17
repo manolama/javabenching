@@ -109,6 +109,12 @@
           <artifactId>jmh-samples</artifactId>
           <version>${javac.target}</version>
         </dependency>
+        
+        <dependency>
+          <groupId>it.unimi.dsi</groupId>
+          <artifactId>fastutil</artifactId>
+          <version>8.1.0</version>
+        </dependency>
     </dependencies>
 
 </project>
