@@ -30,69 +30,94 @@ public class SimDTest {
   @State(Scope.Thread)
   public static class Context
   {
-      public final long[] values = new long[SIZE];
-      public final long[] results = new long[SIZE];
-      
-      public final double[] dvalues = new double[SIZE];
-      public final double[] dresults = new double[SIZE];
-      
-      public final List<Long> lvalues = Lists.newArrayListWithCapacity(SIZE);
-      public final List<Long> lresults = Lists.newArrayListWithCapacity(SIZE);
-
-      public final List<Double> ldvalues = Lists.newArrayListWithCapacity(SIZE);
-      public final List<Double> ldresults = Lists.newArrayListWithCapacity(SIZE);
-      
-      @Setup
-      public void setup()
-      {
-          Random random = new Random();
-          for (int i = 0; i < SIZE; i++) {
-              values[i] = random.nextLong();
-              lvalues.add(values[i]);
-              dvalues[i] = random.nextDouble();
-              ldvalues.add(dvalues[i]);
-          }
-      }
-  }
-  
-  @Benchmark
-  public long[] myIntegerArrayIncrement(Context context, Blackhole blackHole)
-  {
+    public final long[] values = new long[SIZE];
+    public final double[] dvalues = new double[SIZE];
+    public final List<Long> lvalues = Lists.newArrayListWithCapacity(SIZE);
+    public final List<Double> ldvalues = Lists.newArrayListWithCapacity(SIZE);
+    public final MyDP[] ldps = new MyDP[SIZE];
+    public final MyDP[] ddps = new MyDP[SIZE];
+     
+    @Setup
+    public void setup()
+    {
+      Random random = new Random();
       for (int i = 0; i < SIZE; i++) {
-          context.results[i] = context.values[i] + 1;
+        values[i] = random.nextLong();
+        lvalues.add(values[i]);
+        ldps[i] = new MyDP(values[i]);
+        dvalues[i] = random.nextDouble();
+        ldvalues.add(dvalues[i]);
+        ddps[i] = new MyDP(dvalues[i]);
       }
-      return context.results;
+    }
   }
   
   @Benchmark
-  public double[] myDoubleArrayIncrement(Context context, Blackhole blackHole)
+  public void myIntegerArrayIncrement(Context context, Blackhole blackHole)
   {
-      for (int i = 0; i < SIZE; i++) {
-          context.dresults[i] = context.dvalues[i] + 1;
-      }
-      return context.dresults;
+    final long[] results = new long[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      results[i] = context.values[i] + 1;
+    }
+    blackHole.consume(results);
   }
   
   @Benchmark
-  public List<Long> myIntegerListIncrement(Context context, Blackhole blackHole)
+  public void myDoubleArrayIncrement(Context context, Blackhole blackHole)
   {
-      // sucks
-      context.lresults.clear();
-      for (long i : context.lvalues) {
-          context.lresults.add(i + 1);
-      }
-      return context.lresults;
+    final double[] results = new double[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      results[i] = context.dvalues[i] + 1;
+    }
+    blackHole.consume(results);
   }
   
   @Benchmark
-  public List<Double> myDoubleListIncrement(Context context, Blackhole blackHole)
+  public void myIntegerListIncrement(Context context, Blackhole blackHole)
   {
-      // sucks
-    context.ldresults.clear();
-      for (double i : context.ldvalues) {
-          context.ldresults.add(i + 1);
+    // sucks
+    final List<Long> results = Lists.newArrayListWithCapacity(SIZE);
+    for (long i : context.lvalues) {
+      results.add(i + 1);
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myDoubleListIncrement(Context context, Blackhole blackHole)
+  {
+    // sucks
+    final List<Double> results = Lists.newArrayListWithCapacity(SIZE);
+    for (double i : context.ldvalues) {
+      results.add(i + 1);
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myIntegerArrayDP(Context context, Blackhole blackHole) {
+    final MyDP[] results = new MyDP[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      if (context.ldps[i].isFloat()) {
+        results[i] = new MyDP(context.ldps[i].getDouble() + 1);
+      } else {
+        results[i] = new MyDP(context.ldps[i].getLong() + 1);
       }
-      return context.ldresults;
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myDoubleArrayDP(Context context, Blackhole blackHole) {
+    final MyDP[] results = new MyDP[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      if (context.ddps[i].isFloat()) {
+        results[i] = new MyDP(context.ddps[i].getDouble() + 1);
+      } else {
+        results[i] = new MyDP(context.ddps[i].getLong() + 1);
+      }
+    }
+    blackHole.consume(results);
   }
   
   static class MyDP {
