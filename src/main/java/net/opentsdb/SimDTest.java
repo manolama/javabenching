@@ -33,11 +33,14 @@ public class SimDTest {
   public static class Context
   {
     public final long[] values = new long[SIZE];
+    public final long[] values2 = new long[SIZE];
     public final double[] dvalues = new double[SIZE];
     public final List<Long> lvalues = Lists.newArrayListWithCapacity(SIZE);
     public final List<Double> ldvalues = Lists.newArrayListWithCapacity(SIZE);
     public final MyDP[] ldps = new MyDP[SIZE];
     public final MyDP[] ddps = new MyDP[SIZE];
+    public final MyDPPrimitive[] pldps = new MyDPPrimitive[SIZE];
+    public final MyDPPrimitive[] pddps = new MyDPPrimitive[SIZE];
     public final LongArrayList full = new LongArrayList(SIZE);
     public final DoubleArrayList fudl = new DoubleArrayList(SIZE);
      
@@ -47,12 +50,15 @@ public class SimDTest {
       Random random = new Random();
       for (int i = 0; i < SIZE; i++) {
         values[i] = random.nextLong();
+        values2[i] = random.nextLong();
         lvalues.add(values[i]);
         ldps[i] = new MyDP(values[i]);
+        pldps[i] = new MyDPPrimitive(values[i]);
         full.add(values[i]);
         dvalues[i] = random.nextDouble();
         ldvalues.add(dvalues[i]);
         ddps[i] = new MyDP(dvalues[i]);
+        pddps[i] = new MyDPPrimitive(dvalues[i]);
         fudl.add(dvalues[i]);
       }
     }
@@ -127,6 +133,32 @@ public class SimDTest {
   }
   
   @Benchmark
+  public void myIntegerArrayDPPrimitive(Context context, Blackhole blackHole) {
+    final MyDPPrimitive[] results = new MyDPPrimitive[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      if (context.pldps[i].isFloat()) {
+        results[i] = new MyDPPrimitive(context.pldps[i].getDouble() + 1);
+      } else {
+        results[i] = new MyDPPrimitive(context.pldps[i].getLong() + 1);
+      }
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myDoubleArrayDPPrimitive(Context context, Blackhole blackHole) {
+    final MyDPPrimitive[] results = new MyDPPrimitive[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      if (context.pddps[i].isFloat()) {
+        results[i] = new MyDPPrimitive(context.pddps[i].getDouble() + 1);
+      } else {
+        results[i] = new MyDPPrimitive(context.pddps[i].getLong() + 1);
+      }
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
   public void myIntegerFastUtilIncrement(Context context, Blackhole blackHole)
   {
     // sucks
@@ -144,6 +176,15 @@ public class SimDTest {
     final DoubleArrayList results = new DoubleArrayList(SIZE);
     for (double i : context.fudl) {
       results.add(i + 1);
+    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public void myVectorSum(Context context, Blackhole blackHole) {
+    final long[] results = new long[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+      results[i] = context.values[i] + context.values2[i];
     }
     blackHole.consume(results);
   }
@@ -175,6 +216,39 @@ public class SimDTest {
     
     public long getLong() {
       return Bytes.getLong(value);
+    }
+  }
+  
+  static class MyDPPrimitive {
+    final long ts;
+    final long lv;
+    final double dv;
+    final boolean isFloat;
+    
+    public MyDPPrimitive(final long v) {
+      ts = 1;
+      lv = v;
+      dv = 0;
+      isFloat = false;
+    }
+    
+    public MyDPPrimitive(final double v) {
+      ts = 1;
+      lv = 0;
+      dv = v;
+      isFloat = true;
+    }
+    
+    public boolean isFloat() {
+      return isFloat;
+    }
+    
+    public long getLong() {
+      return lv;
+    }
+    
+    public double getDouble() {
+      return dv;
     }
   }
 }
