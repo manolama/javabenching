@@ -199,12 +199,12 @@ public class GroupByAndSum {
       results.add(times);
     }
     
-    for (final TS t : results) {
-      System.out.println(t.id);
-      for (final DP d : t) {
-        System.out.println("  " + d.getTS() + " " + d.getV());
-      }
-    }
+//    for (final TS t : results) {
+//      System.out.println(t.id);
+//      for (final DP d : t) {
+//        System.out.println("  " + d.getTS() + " " + d.getV());
+//      }
+//    }
     blackHole.consume(results);
   }
   
