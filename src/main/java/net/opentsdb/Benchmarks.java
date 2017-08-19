@@ -28,11 +28,14 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 public class Benchmarks {
 
   public static void main(String[] args) {
-//    if (true) {
-//      Context ctx = new Context();
-//      ctx.setup();
-//      GroupByAndSum.runTraditionalParallel(ctx, null);
-//    }
+    if (true) {
+      GroupByAndSum.Context ctx = new GroupByAndSum.Context();
+      ctx.setup();
+      //GroupByAndSum.runStreamedSerial(ctx, null);
+      //GroupByAndSum.runTraditional(ctx, null);
+      GroupByAndSum.runRxSerial(ctx, null);
+      return;
+    }
     
     Options options = new OptionsBuilder()
         //.include(GroupByAndSum.class.getSimpleName())

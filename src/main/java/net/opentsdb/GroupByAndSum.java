@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -42,6 +43,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import com.google.common.collect.Lists;
 import com.stumbleupon.async.Deferred;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import net.opentsdb.data.MergedTimeSeriesId;
 import net.opentsdb.data.SimpleStringTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
@@ -61,7 +64,9 @@ public class GroupByAndSum {
   static final byte[] KEY = "tagk".getBytes();
   
   /** How many source time series to create */
-  static final int TIMESERIES = 1000;
+  static final int TIMESERIES = 100;
+  
+  static final int DPS = 16;
   
   static final int GROUPS = 10;
   
@@ -79,7 +84,7 @@ public class GroupByAndSum {
         if (i % GROUPS == 0) {
           tagv++;
         }
-        source.add(new TS(timestamp, 1440, Integer.toString(tagv)));
+        source.add(new TS(timestamp, DPS, Integer.toString(tagv)));
       }
       Collections.shuffle(source);
     }
@@ -93,7 +98,7 @@ public class GroupByAndSum {
 
   @Benchmark
   public static void runStreamedSerial(Context context, Blackhole blackHole) {
-    blackHole.consume(context.source.stream()
+    List<TS> results = context.source.stream()
         .map(series -> new AbstractMap.SimpleEntry<byte[], TS>(series.id.tags().get(KEY), series))
         .collect(
             groupingBy(Map.Entry::getKey, ByteMap::new, mapping(Map.Entry::getValue, toList()))
@@ -111,14 +116,21 @@ public class GroupByAndSum {
             .entrySet().stream()
               .collect(() -> new TS(id.build()), 
                   (ts, dp) -> { ts.addDp(dp.getKey(), dp.getValue()); }, 
-                  (ts1, ts2) -> { System.out.println("COMBINING..."); });
+                  (ts1, ts2) -> { /*System.out.println("COMBINING...");*/ });
           
-        }).collect(toList()));
+        }).collect(toList());
+//    for (final TS t : results) {
+//      System.out.println(t.id);
+//      for (final DP d : t) {
+//        System.out.println("  " + d.getTS() + " " + d.getV());
+//      }
+//    }
+    blackHole.consume(results);
   }
   
   @Benchmark
   public static void runStreamedParallel(Context context, Blackhole blackHole) {
-    blackHole.consume(context.source.stream()
+    List<TS> results = context.source.stream()
         .map(series -> new AbstractMap.SimpleEntry<byte[], TS>(series.id.tags().get(KEY), series))
         .collect(
             groupingBy(Map.Entry::getKey, ByteMap::new, mapping(Map.Entry::getValue, toList()))
@@ -137,9 +149,10 @@ public class GroupByAndSum {
             .entrySet().stream()
               .collect(() -> new TS(id.build()), 
                   (ts, dp) -> { ts.addDp(dp.getKey(), dp.getValue()); }, 
-                  (ts1, ts2) -> { System.out.println("COMBINING..."); });
+                  (ts1, ts2) -> { /*System.out.println("COMBINING...");*/ });
           
-        }).collect(toList()));
+        }).collect(toList());
+    blackHole.consume(results);
   }
 
   @Benchmark
@@ -184,6 +197,13 @@ public class GroupByAndSum {
       }
       
       results.add(times);
+    }
+    
+    for (final TS t : results) {
+      System.out.println(t.id);
+      for (final DP d : t) {
+        System.out.println("  " + d.getTS() + " " + d.getV());
+      }
     }
     blackHole.consume(results);
   }
@@ -261,6 +281,72 @@ public class GroupByAndSum {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public static void runRxSerial(Context context, Blackhole blackHole) {
+    // works!
+//    MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
+//    
+//    TS result = Observable.fromIterable(context.source)
+//    .flatMap(ts -> {
+//      System.out.println("ADDING SRC: " + ts.id);
+//      id.addSeries(ts.id);
+//      return Observable.fromIterable(ts);
+//    })
+//    .groupBy(dp -> dp.getTS())
+//    .collect(TreeMap<Long, Double>::new, (map, dps) -> {
+//      dps.reduce(new Double(0), (x, d) -> (x + d.getV()) )
+//          .subscribe(v -> { map.put(dps.getKey(), v); });
+//    })
+//   //.map(map -> Observable.fromIterable(map.entrySet()))
+//   .flattenAsObservable(map -> map.entrySet())
+//   .collect(() -> new TS(), (newts, e) -> { 
+//     newts.addDp(e.getKey(), e.getValue()); })
+//   .blockingGet();
+//    
+//    result.id = id.build();
+//    System.out.println(result.id);
+//    for (final DP d : result) {
+//      System.out.println(d.getTS() + " " + d.getV());
+//    }
+    
+// works
+//    Observable.fromIterable(context.source.get(0))
+//    .reduce((double) 0, (x, y) -> x + y.getV())
+//    .subscribe(v -> { System.out.println(v);});
+    
+    
+    List<TS> results = Observable.fromIterable(context.source)
+    .groupBy(series -> series.id.tags().get(KEY))
+    .map(groups -> {
+      MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
+      return groups.map(ts -> {
+        id.addSeries(ts.id);
+        return Observable.fromIterable(ts)
+        .groupBy(dp -> dp.getTS())
+        .collect(TreeMap<Long, Double>::new, 
+            (map, dps) -> {
+          dps.reduce(new Double(0), (x, d) -> (x + d.getV()))
+          .subscribe(v -> { map.put(dps.getKey(), v); });
+        })
+        .flattenAsObservable(map -> map.entrySet())
+        .collect(() -> new TS(), (newts, e) -> {
+          newts.addDp(e.getKey(), e.getValue());
+        })
+        .doAfterSuccess(t -> t.id = id.build());
+      });
+    })
+    .collect(ArrayList<TS>::new, (list, ts) -> { ts.subscribe(s -> { s.subscribe(v -> { list.add(v); } ); }); })
+    .blockingGet();
+    
+//    for (final TS t : results) {
+//      System.out.println(t.id);
+//      for (final DP d : t) {
+//        System.out.println("  " + d.getTS() + " " + d.getV());
+//      }
+//    }
     blackHole.consume(results);
   }
   
