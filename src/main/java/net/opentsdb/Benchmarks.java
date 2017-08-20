@@ -33,7 +33,7 @@ public class Benchmarks {
       ctx.setup();
       //GroupByAndSum.runStreamedSerial(ctx, null);
       //GroupByAndSum.runTraditional(ctx, null);
-      GroupByAndSum.runRxSerial(ctx, null);
+      GroupByAndSum.runRxParallel(ctx, null);
       return;
     }
     

@@ -45,6 +45,7 @@ import com.stumbleupon.async.Deferred;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.schedulers.Schedulers;
 import net.opentsdb.data.MergedTimeSeriesId;
 import net.opentsdb.data.SimpleStringTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
@@ -286,40 +287,43 @@ public class GroupByAndSum {
   
   @Benchmark
   public static void runRxSerial(Context context, Blackhole blackHole) {
-    // works!
-//    MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
-//    
-//    TS result = Observable.fromIterable(context.source)
-//    .flatMap(ts -> {
-//      System.out.println("ADDING SRC: " + ts.id);
-//      id.addSeries(ts.id);
-//      return Observable.fromIterable(ts);
-//    })
-//    .groupBy(dp -> dp.getTS())
-//    .collect(TreeMap<Long, Double>::new, (map, dps) -> {
-//      dps.reduce(new Double(0), (x, d) -> (x + d.getV()) )
-//          .subscribe(v -> { map.put(dps.getKey(), v); });
-//    })
-//   //.map(map -> Observable.fromIterable(map.entrySet()))
-//   .flattenAsObservable(map -> map.entrySet())
-//   .collect(() -> new TS(), (newts, e) -> { 
-//     newts.addDp(e.getKey(), e.getValue()); })
-//   .blockingGet();
-//    
-//    result.id = id.build();
-//    System.out.println(result.id);
-//    for (final DP d : result) {
-//      System.out.println(d.getTS() + " " + d.getV());
-//    }
-    
-// works
-//    Observable.fromIterable(context.source.get(0))
-//    .reduce((double) 0, (x, y) -> x + y.getV())
-//    .subscribe(v -> { System.out.println(v);});
-    
-    
     List<TS> results = Observable.fromIterable(context.source)
     .groupBy(series -> series.id.tags().get(KEY))
+    .map(groups -> {
+      MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
+      return groups.map(ts -> {
+        id.addSeries(ts.id);
+        return Observable.fromIterable(ts)
+        .groupBy(dp -> dp.getTS())
+        .collect(TreeMap<Long, Double>::new, 
+            (map, dps) -> {
+          dps.reduce(new Double(0), (x, d) -> (x + d.getV()))
+          .subscribe(v -> { map.put(dps.getKey(), v); });
+        })
+        .flattenAsObservable(map -> map.entrySet())
+        .collect(() -> new TS(), (newts, e) -> {
+          newts.addDp(e.getKey(), e.getValue());
+        })
+        .doAfterSuccess(t -> t.id = id.build());
+      });
+    })
+    .collect(ArrayList<TS>::new, (list, ts) -> { ts.subscribe(s -> { s.subscribe(v -> { list.add(v); } ); }); })
+    .blockingGet();
+    
+//    for (final TS t : results) {
+//      System.out.println(t.id);
+//      for (final DP d : t) {
+//        System.out.println("  " + d.getTS() + " " + d.getV());
+//      }
+//    }
+    blackHole.consume(results);
+  }
+  
+  @Benchmark
+  public static void runRxParallel(Context context, Blackhole blackHole) {
+    List<TS> results = Observable.fromIterable(context.source)
+    .groupBy(series -> series.id.tags().get(KEY))
+    .subscribeOn(Schedulers.newThread())
     .map(groups -> {
       MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
       return groups.map(ts -> {
