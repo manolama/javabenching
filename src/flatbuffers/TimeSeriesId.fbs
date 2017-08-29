@@ -1,0 +1,19 @@
+namespace net.opentsdb.flatbuffers;
+
+table ByteArray {
+  bytearray:[ubyte];
+}
+
+table TimeSeriesId {
+  alias:string;
+  namespaces:[ByteArray];
+  metrics:[ByteArray];
+  tag_keys:[ByteArray];
+  tag_values:[ByteArray];
+  aggregated_tags:[ByteArray];
+  aggregated_tag_values:[ByteArray];
+  disjoint_tags:[ByteArray];
+  disjoing_tag_values:[ByteArray];
+}
+
+root_type TimeSeriesId;

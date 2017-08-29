@@ -1,0 +1,14 @@
+@namespace("net.opentsdb.avro")
+protocol TSDBAvro {
+record TimeSeriesId {
+  string alias;
+  array<bytes> namespaces;
+  array<bytes> metrics;
+  array<bytes> tag_keys;
+  array<bytes> tag_values;
+  array<bytes> aggregated_tags;
+  array<bytes> aggregated_tag_values;
+  array<bytes> disjoint_tags;
+  array<bytes> disjoint_tag_values;
+}
+}

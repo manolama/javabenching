@@ -1,0 +1,12 @@
+@namespace("net.opentsdb.avro")
+protocol TSDBAvro {
+import idl "TimeSeriesId.avdl";
+record TimeSeries {
+  net.opentsdb.avro.TimeSeriesId id;
+  long basetime;
+  int encoding;
+  bytes payload;
+  array<long> timestamps;
+  array<double> values;
+}
+}

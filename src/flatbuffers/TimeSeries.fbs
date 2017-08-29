@@ -1,0 +1,12 @@
+include "TimeSeriesId.fbs";
+
+namespace net.opentsdb.flatbuffers;
+
+table TimeSeries {
+  id:TimeSeriesId;
+  basetime:long;
+  encoding:int;
+  payload:[ubyte];
+  timestamps:[long];
+  values:[double];
+}
