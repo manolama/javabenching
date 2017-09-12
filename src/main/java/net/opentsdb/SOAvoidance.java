@@ -27,6 +27,60 @@ import co.paralleluniverse.fibers.SuspendExecution;
  * see https://stackoverflow.com/questions/860550/stack-overflows-from-deep-recursion-in-java
  * https://stackoverflow.com/questions/189725/what-is-a-trampoline-function
  * 
+ * Looks like the thread pool method doesn't incur too much of a perf hit over
+ * regular old recursion. Also Quasar is definitely a bit slower than the 
+ * thread pool, which is a bummer. And ForkJoin is just really inconsistent and
+ * right-out there.
+ * 
+ * <code>
+ * Benchmark                                                       Mode  Cnt         Score         Error   Units
+SOAvoidance.mutualRecursion                                     avgt   15   5613856.149 ±   79140.618   ns/op
+SOAvoidance.mutualRecursion:·gc.alloc.rate                      avgt   15      1484.245 ±      20.924  MB/sec
+SOAvoidance.mutualRecursion:·gc.alloc.rate.norm                 avgt   15  13107263.870 ±      22.225    B/op
+SOAvoidance.mutualRecursion:·gc.churn.PS_Eden_Space             avgt   15      1488.285 ±      46.688  MB/sec
+SOAvoidance.mutualRecursion:·gc.churn.PS_Eden_Space.norm        avgt   15  13141576.480 ±  302534.261    B/op
+SOAvoidance.mutualRecursion:·gc.churn.PS_Survivor_Space         avgt   15         0.185 ±       0.059  MB/sec
+SOAvoidance.mutualRecursion:·gc.churn.PS_Survivor_Space.norm    avgt   15      1636.886 ±     530.733    B/op
+SOAvoidance.mutualRecursion:·gc.count                           avgt   15       191.000                counts
+SOAvoidance.mutualRecursion:·gc.time                            avgt   15       124.000                    ms
+SOAvoidance.recursion                                           avgt   15   5829767.904 ±  101247.177   ns/op
+SOAvoidance.recursion:·gc.alloc.rate                            avgt   15      1429.800 ±      24.939  MB/sec
+SOAvoidance.recursion:·gc.alloc.rate.norm                       avgt   15  13107264.232 ±      23.522    B/op
+SOAvoidance.recursion:·gc.churn.PS_Eden_Space                   avgt   15      1427.557 ±      86.766  MB/sec
+SOAvoidance.recursion:·gc.churn.PS_Eden_Space.norm              avgt   15  13088666.478 ±  796089.137    B/op
+SOAvoidance.recursion:·gc.churn.PS_Survivor_Space               avgt   15         0.161 ±       0.057  MB/sec
+SOAvoidance.recursion:·gc.churn.PS_Survivor_Space.norm          avgt   15      1482.664 ±     533.105    B/op
+SOAvoidance.recursion:·gc.count                                 avgt   15       148.000                counts
+SOAvoidance.recursion:·gc.time                                  avgt   15       124.000                    ms
+SOAvoidance.runQuasarFibers                                     avgt   15   8424480.665 ±   95461.731   ns/op
+SOAvoidance.runQuasarFibers:·gc.alloc.rate                      avgt   15      1033.875 ±      12.153  MB/sec
+SOAvoidance.runQuasarFibers:·gc.alloc.rate.norm                 avgt   15  13699049.306 ±    7169.182    B/op
+SOAvoidance.runQuasarFibers:·gc.churn.PS_Eden_Space             avgt   15      1038.658 ±      94.989  MB/sec
+SOAvoidance.runQuasarFibers:·gc.churn.PS_Eden_Space.norm        avgt   15  13758985.862 ± 1206782.041    B/op
+SOAvoidance.runQuasarFibers:·gc.churn.PS_Survivor_Space         avgt   15         0.287 ±       0.137  MB/sec
+SOAvoidance.runQuasarFibers:·gc.churn.PS_Survivor_Space.norm    avgt   15      3808.990 ±    1846.479    B/op
+SOAvoidance.runQuasarFibers:·gc.count                           avgt   15        85.000                counts
+SOAvoidance.runQuasarFibers:·gc.time                            avgt   15       119.000                    ms
+SOAvoidance.runThreadPoolTest                                   avgt   15   7862002.919 ±  131704.074   ns/op
+SOAvoidance.runThreadPoolTest:·gc.alloc.rate                    avgt   15      1003.840 ±     297.404  MB/sec
+SOAvoidance.runThreadPoolTest:·gc.alloc.rate.norm               avgt   15  12417148.914 ± 3671816.465    B/op
+SOAvoidance.runThreadPoolTest:·gc.churn.PS_Eden_Space           avgt   15      1098.341 ±      70.332  MB/sec
+SOAvoidance.runThreadPoolTest:·gc.churn.PS_Eden_Space.norm      avgt   15  13574657.826 ±  749050.710    B/op
+SOAvoidance.runThreadPoolTest:·gc.churn.PS_Survivor_Space       avgt   15         0.172 ±       0.073  MB/sec
+SOAvoidance.runThreadPoolTest:·gc.churn.PS_Survivor_Space.norm  avgt   15      2136.351 ±     904.416    B/op
+SOAvoidance.runThreadPoolTest:·gc.count                         avgt   15       184.000                counts
+SOAvoidance.runThreadPoolTest:·gc.time                          avgt   15       103.000                    ms
+SOAvoidance.trampoline                                          avgt   15   5650174.351 ±   93537.719   ns/op
+SOAvoidance.trampoline:·gc.alloc.rate                           avgt   15      1497.238 ±      24.218  MB/sec
+SOAvoidance.trampoline:·gc.alloc.rate.norm                      avgt   15  13303895.991 ±      22.785    B/op
+SOAvoidance.trampoline:·gc.churn.PS_Eden_Space                  avgt   15      1509.347 ±      76.781  MB/sec
+SOAvoidance.trampoline:·gc.churn.PS_Eden_Space.norm             avgt   15  13415640.383 ±  751066.309    B/op
+SOAvoidance.trampoline:·gc.churn.PS_Survivor_Space              avgt   15         0.235 ±       0.096  MB/sec
+SOAvoidance.trampoline:·gc.churn.PS_Survivor_Space.norm         avgt   15      2085.286 ±     855.556    B/op
+SOAvoidance.trampoline:·gc.count                                avgt   15       221.000                counts
+SOAvoidance.trampoline:·gc.time                                 avgt   15       133.000                    ms
+ * </code>
+ * 
  */
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
