@@ -231,8 +231,33 @@
   </executions>
 </plugin>
 
+
+<plugin>
+    <artifactId>maven-dependency-plugin</artifactId>
+    <version>2.5.1</version>
+    <executions>
+        <execution>
+            <id>getClasspathFilenames</id>
+            <goals>
+                <goal>properties</goal>
+            </goals>
+        </execution>
+     </executions>
+</plugin>
       </plugins>
     </build>
+    
+    <repositories>
+
+  <repository>
+
+      <id>org.openspaces</id>
+
+      <url>http://Maven-repository.openspaces.org</url>
+
+  </repository>
+
+</repositories>
 
     <dependencies>
       <dependency>
@@ -244,6 +269,54 @@
           <groupId>net.opentsdb</groupId>
           <artifactId>opentsdb-core</artifactId>
           <version>${opentsdb.version}</version>
+        </dependency>
+        
+                        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.7.9</version>
+        </dependency>
+                <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.7.9</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.7.9</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <version>4.1.15.Final</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-common</artifactId>
+            <version>4.1.15.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec</artifactId>
+            <version>4.1.15.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+            <version>4.1.15.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport</artifactId>
+            <version>4.1.15.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.15.Final</version>
         </dependency>
         
         <dependency>
@@ -293,6 +366,12 @@
         </dependency>
         
         <dependency>
+    <groupId>org.openjdk.jol</groupId>
+    <artifactId>jol-core</artifactId>
+    <version>0.8</version>
+</dependency>
+        
+        <dependency>
     <groupId>org.capnproto</groupId>
     <artifactId>runtime</artifactId>
     <version>0.1.1</version>
@@ -309,6 +388,62 @@
   <artifactId>avro</artifactId>
   <version>1.8.2</version>
 </dependency>
+
+<dependency>
+   <groupId>org.redisson</groupId>
+   <artifactId>redisson</artifactId>
+   <version>3.5.1</version>
+</dependency>  
+
+<dependency>
+    <groupId>org.apache.ignite</groupId>
+    <artifactId>ignite-core</artifactId>
+    <version>2.1.0</version>
+</dependency>
+
+<dependency>
+    <groupId>io.atomix</groupId>
+    <artifactId>atomix-all</artifactId>
+    <version>1.0.8</version>
+</dependency>
+
+<dependency>
+    <groupId>com.hazelcast</groupId>
+    <artifactId>hazelcast</artifactId>
+    <version>3.8.5</version>
+</dependency>
+
+<!--
+<dependency>
+      <groupId>org.gigaspaces</groupId>
+      <artifactId>xap-openspaces</artifactId>
+      <version>12.0.0</version>
+  </dependency> -->
+  
+  <!-- TODO - find where this sucker is hosted
+  <dependency>
+      <groupId>com.gigaspaces.util</groupId>
+      <artifactId>collections-core</artifactId>
+      <version>1.0</version>
+  </dependency>-->
+
+<dependency>
+    <groupId>co.paralleluniverse</groupId>
+    <artifactId>quasar-core</artifactId>
+    <version>0.7.9</version>
+</dependency>
+
+<dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>1.0.13</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.0.13</version>
+    </dependency>
     </dependencies>
 
 </project>
