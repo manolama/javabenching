@@ -3,6 +3,8 @@ package net.opentsdb.pipeline;
 import java.util.Collection;
 import java.util.Iterator;
 
+import com.stumbleupon.async.Deferred;
+
 import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
@@ -31,7 +33,7 @@ public class Interfaces {
   }
   
   public interface TSProcessor<T extends TimeSeriesDataType> {
-    public TS<T> source();
+    
   }
   
   public interface QPipeline {

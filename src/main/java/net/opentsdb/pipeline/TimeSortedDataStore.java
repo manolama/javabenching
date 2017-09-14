@@ -23,10 +23,12 @@ import net.opentsdb.data.TimeStamp;
 import net.opentsdb.data.types.annotation.AnnotationType;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.Abstracts.MyTS;
 import net.opentsdb.pipeline.Interfaces.QExecution;
 import net.opentsdb.pipeline.Interfaces.QResult;
 import net.opentsdb.pipeline.Interfaces.StreamListener;
 import net.opentsdb.pipeline.Interfaces.TS;
+import net.opentsdb.pipeline.Interfaces.TSProcessor;
 import net.opentsdb.utils.Bytes;
 
 public class TimeSortedDataStore {
@@ -165,37 +167,6 @@ public class TimeSortedDataStore {
       return false;
     }
     
-  }
-  
-  abstract class MyTS<T extends TimeSeriesDataType> implements TS<T> {
-    byte[] dps;
-    List<byte[]> dps_cached;
-    TimeSeriesId id;
-    int idx;
-    
-    public MyTS(final TimeSeriesId id) {
-      this.id = id;
-    }
-    
-    @Override
-    public TimeSeriesId id() {
-      return id;
-    }
-    
-    @Override
-    public void setCache(boolean cache) {
-      if (cache) {
-        dps_cached = Lists.newArrayList();
-      }
-    }
-    
-    public void nextChunk(final byte[] data) {
-      dps = data;
-      if (dps_cached != null) {
-        dps_cached.add(data);
-      }
-      idx = 0;
-    }
   }
   
   class MyNumTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
