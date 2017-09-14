@@ -44,6 +44,7 @@ public class Interfaces {
   
   public interface QExecution {
     public void setListener(StreamListener listener);
+    public StreamListener getListener();
     public boolean endOfStream();
     public void fetchNext();
   }

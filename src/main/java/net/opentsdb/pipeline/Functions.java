@@ -18,6 +18,7 @@ import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.Interfaces.QExecution;
 import net.opentsdb.pipeline.Interfaces.QResult;
 import net.opentsdb.pipeline.Interfaces.StreamListener;
 import net.opentsdb.pipeline.Interfaces.TS;
@@ -25,11 +26,18 @@ import net.opentsdb.pipeline.Interfaces.TSProcessor;
 
 public class Functions {
 
-  public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult {
+  public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult, QExecution {
     StreamListener upstream;
+    QExecution downstream_execution;
     
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
+    
+    public GroupBy(QExecution downstream_execution) {
+      this.upstream = downstream_execution.getListener();
+      this.downstream_execution = downstream_execution;
+      downstream_execution.setListener(this);
+    }
     
     @Override
     public void onComplete() {
@@ -38,11 +46,13 @@ public class Functions {
 
     @Override
     public void onNext(QResult next) {
+      //System.out.println("Received next...");
       for (TS<?> ts : next.series()) {
         if (hashes.contains(ts.hashCode())) {
           continue;
         }
         
+        // naive group by on the host tag.
         TimeSeriesId id = SimpleStringTimeSeriesId.newBuilder()
             .addMetric(new String(ts.id().metrics().get(0), Const.UTF8_CHARSET))
             .addTags("host", new String(ts.id().tags().get("host".getBytes(Const.UTF8_CHARSET)), Const.UTF8_CHARSET))
@@ -53,10 +63,14 @@ public class Functions {
           extant = new GBIterator(id);
           time_series.put(id, extant);
         }
-        extant.sources.add((TS<NumericType>) ts);
+        extant.addSource((TS<NumericType>) ts);
         hashes.add(ts.hashCode());
       }
       
+      for (TS<?> it : time_series.values()) {
+        ((GBIterator) it).reset();
+      }
+      //System.out.println("Calling up: " + time_series.size());
       upstream.onNext(this);
     }
 
@@ -79,6 +93,25 @@ public class Functions {
         this.id = id;
         sources = Lists.newArrayList();
         dp = new MutableNumericType(id);
+      }
+      
+      public void reset() {
+        has_next = false;
+        for (final TS<NumericType> source : sources) {
+          if (source.iterator().hasNext()) {
+            has_next = true;
+            break;
+          }
+        }
+        first_run = true;
+        next_ts = Long.MAX_VALUE;
+      }
+      
+      public void addSource(TS<NumericType> source) {
+        if (source.iterator().hasNext()) {
+          has_next = true;
+        }
+        sources.add(source);
       }
       
       @Override
@@ -104,7 +137,10 @@ public class Functions {
 
       @Override
       public TimeSeriesValue<NumericType> next() {
+        has_next = false;
+        try {
         if (first_run) {
+          values = Lists.newArrayListWithCapacity(sources.size());
           for (final TS<NumericType> ts : sources) {
             final Iterator<TimeSeriesValue<NumericType>> it = ts.iterator();
             if (it.hasNext()) {
@@ -117,6 +153,8 @@ public class Functions {
               values.add(null);
             }
           }
+          first_run = false;
+          //System.out.println("TS after first run: " + next_ts);
         }
         
         long next_next_ts = Long.MAX_VALUE;
@@ -140,15 +178,21 @@ public class Functions {
               values.set(i, null);
             }
           } else {
-            if (v.timestamp().msEpoch() < next_next_ts) {
+            if (v.timestamp().msEpoch() > next_next_ts) {
               next_next_ts = v.timestamp().msEpoch();
+              has_next = true;
             }
           }
         }
         
         dp.reset(new MillisecondTimeStamp(next_ts), sum, 1);
         next_ts = next_next_ts;
+        //System.out.println("Returning dp: " + dp.timestamp() + " " + dp.toDouble());
         return dp;
+        } catch (Exception e){ 
+          e.printStackTrace();
+          throw new RuntimeException("WTF?", e);
+        }
       }
       
     }
@@ -167,6 +211,26 @@ public class Functions {
     @Override
     public boolean hasException() {
       return false;
+    }
+
+    @Override
+    public void setListener(StreamListener listener) {
+      upstream = listener;
+    }
+
+    @Override
+    public boolean endOfStream() {
+      return downstream_execution.endOfStream();
+    }
+
+    @Override
+    public void fetchNext() {
+      downstream_execution.fetchNext();
+    }
+    
+    @Override
+    public StreamListener getListener() {
+      return upstream;
     }
   }
   

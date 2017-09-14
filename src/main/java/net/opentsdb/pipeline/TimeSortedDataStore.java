@@ -23,12 +23,9 @@ import net.opentsdb.data.TimeStamp;
 import net.opentsdb.data.types.annotation.AnnotationType;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
-import net.opentsdb.pipeline.Abstracts.MyTS;
-import net.opentsdb.pipeline.Interfaces.QExecution;
-import net.opentsdb.pipeline.Interfaces.QResult;
-import net.opentsdb.pipeline.Interfaces.StreamListener;
-import net.opentsdb.pipeline.Interfaces.TS;
-import net.opentsdb.pipeline.Interfaces.TSProcessor;
+import net.opentsdb.pipeline.Abstracts.*;
+import net.opentsdb.pipeline.Functions.*;
+import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 
 public class TimeSortedDataStore {
@@ -83,14 +80,19 @@ public class TimeSortedDataStore {
 
     @Override
     public void fetchNext() {
+      
       for (int x = 0; x < timeseries.size(); x++) {
+        if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+          continue;
+        }
         // for now add em all
         byte[] payload = new byte[INTERVALS_PER_CHUNK * 16];
         int idx = reverse_chunks ? payload.length - 8 : 0;
         long local_ts = ts;
         if (reverse_chunks) {
           for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
-            System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+            //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+            System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
             idx -= 8;
             System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
             idx -= 8;
@@ -100,7 +102,8 @@ public class TimeSortedDataStore {
           for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
             System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
             idx += 8;
-            System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+            //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+            System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
             idx += 8;
             local_ts += INTERVAL;
           }
@@ -140,6 +143,11 @@ public class TimeSortedDataStore {
     public Void get() {
       listener.onNext(results);
       return null;
+    }
+
+    @Override
+    public StreamListener getListener() {
+      return listener;
     }
     
   }
@@ -223,11 +231,17 @@ public class TimeSortedDataStore {
   
   public static void main(final String[] args) {
     TimeSortedDataStore store = new TimeSortedDataStore();
-    final MyExecution exec = store.new MyExecution(true);
-
+    QExecution exec = store.new MyExecution(true);
+    exec = (QExecution) new GroupBy(exec);
+    
     class MyListener implements StreamListener {
+      QExecution exec;
       int iterations = 0;
       Deferred<Object> d = new Deferred<Object>();
+      
+      public MyListener(QExecution exec) {
+        this.exec = exec;
+      }
       
       @Override
       public void onComplete() {
@@ -237,28 +251,33 @@ public class TimeSortedDataStore {
 
       @Override
       public void onNext(QResult next) {
-        for (TS<?> ts : next.series()) {
-          if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), ts.id().metrics().get(0)) != 0) {
-            continue;
+        try {
+          System.out.println("Gonna iterate me some data");
+          for (TS<?> ts : next.series()) {
+  //          if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), ts.id().metrics().get(0)) != 0) {
+  //            continue;
+  //          }
+  //          if (Bytes.memcmp("PHX".getBytes(Const.UTF8_CHARSET), ts.id().tags().get("dc".getBytes(Const.UTF8_CHARSET))) != 0) {
+  //            continue;
+  //          }
+  //          if (Bytes.memcmp("web01".getBytes(Const.UTF8_CHARSET), ts.id().tags().get("host".getBytes(Const.UTF8_CHARSET))) != 0) {
+  //            continue;
+  //          }
+            System.out.println(ts.id());
+            Iterator<?> it = ts.iterator();
+            while (it.hasNext()) {
+              TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
+              System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+            }
           }
-          if (Bytes.memcmp("PHX".getBytes(Const.UTF8_CHARSET), ts.id().tags().get("dc".getBytes(Const.UTF8_CHARSET))) != 0) {
-            continue;
+          System.out.println("-------------------------");
+          
+          iterations++;
+          if (!exec.endOfStream()) {
+            exec.fetchNext();
           }
-          if (Bytes.memcmp("web01".getBytes(Const.UTF8_CHARSET), ts.id().tags().get("host".getBytes(Const.UTF8_CHARSET))) != 0) {
-            continue;
-          }
-          System.out.println(ts.id());
-          Iterator<?> it = ts.iterator();
-          while (it.hasNext()) {
-            TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
-            System.out.println("  " + v.timestamp().epoch() + " " + v.value().longValue());
-          }
-        }
-        System.out.println("-------------------------");
-        
-        iterations++;
-        if (!exec.endOfStream()) {
-          exec.fetchNext();
+        } catch (Exception e) {
+          e.printStackTrace();
         }
       }
 
@@ -269,7 +288,7 @@ public class TimeSortedDataStore {
       
     }
     
-    MyListener listener = new MyListener();
+    MyListener listener = new MyListener(exec);
     exec.setListener(listener);
     exec.fetchNext();
     
