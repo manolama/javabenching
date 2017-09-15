@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.reflect.TypeToken;
+
 import avro.shaded.com.google.common.collect.Lists;
 import avro.shaded.com.google.common.collect.Maps;
 import avro.shaded.com.google.common.collect.Sets;
@@ -25,10 +27,91 @@ import net.opentsdb.utils.Pair;
 public class Functions {
 
   /**
+   * Groups time series by ID and only emits numeric data points when there is
+   * an associated string type with the value "foo". For our dummy set, this should
+   * cut out half the DPs.
+   */
+  public static class FilterNumsByString implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
+
+    @Override
+    public void setListener(StreamListener listener) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public StreamListener getListener() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public void fetchNext() {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public QExecutionPipeline getMultiPassClone(StreamListener listener) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public void setCache(boolean cache) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public QueryMode getMode() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Collection<TS<?>> series() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Throwable exception() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public boolean hasException() {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
+    @Override
+    public void onComplete() {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void onNext(QResult next) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      // TODO Auto-generated method stub
+      
+    }
+    
+  }
+  
+  /**
    * Simple SUMming group by. No interpolation at this point, just assumes zero
    * if a series doesn't have a value at some point.
    */
-  public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult, QExecutionPipeline {
+  public static class GroupBy implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
@@ -141,13 +224,7 @@ public class Functions {
       public Iterator<TimeSeriesValue<NumericType>> iterator() {
         return this;
       }
-
-      @Override
-      public void setCache(boolean cache) {
-        // TODO Auto-generated method stub
-        
-      }
-
+      
       @Override
       public boolean hasNext() {
         return has_next;
@@ -221,6 +298,11 @@ public class Functions {
           e.printStackTrace();
           throw new RuntimeException("WTF?", e);
         }
+      }
+
+      @Override
+      public TypeToken<NumericType> type() {
+        return NumericType.TYPE;
       }
       
     }
@@ -305,7 +387,7 @@ public class Functions {
    * and store the standard deviation. Then when the upstream caller starts iterating,
    * we return the difference for the data point from the standard deviation.
    */
-  public static class DiffFromStdD implements TSProcessor<NumericType>, StreamListener, QResult, QExecutionPipeline {
+  public static class DiffFromStdD implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
@@ -422,9 +504,8 @@ public class Functions {
       }
 
       @Override
-      public void setCache(boolean cache) {
-        // TODO Auto-generated method stub
-        
+      public TypeToken<NumericType> type() {
+        return NumericType.TYPE;
       }
       
     }

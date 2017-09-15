@@ -1,5 +1,6 @@
 package net.opentsdb.pipeline;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import net.opentsdb.data.TimeStamp;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Abstracts.*;
+import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 import net.opentsdb.utils.Pair;
 
@@ -46,6 +48,11 @@ public class Implementations {
       idx += 8;
       return dp;
     }
+
+    @Override
+    public TypeToken<NumericType> type() {
+      return NumericType.TYPE;
+    }
   }
   
   public static class ListBackedStringTS extends MyTS<StringType> implements Iterator<TimeSeriesValue<StringType>> {
@@ -78,6 +85,11 @@ public class Implementations {
     public void setStrings(final List<Pair<Long, String>> strings) {
       this.strings = strings;
       idx = 0;
+    }
+
+    @Override
+    public TypeToken<StringType> type() {
+      return StringType.TYPE;
     }
   }
   
@@ -139,5 +151,34 @@ public class Implementations {
       // TODO Auto-generated method stub
       return null;
     }
+  }
+
+  public static class DefaultTSS implements TSs {
+    List<TS<?>> timeseries = Lists.newArrayList();
+    public void addSeries(TS<?> ts) {
+      timeseries.add(ts);
+    }
+    
+    @Override
+    public TimeSeriesId id() {
+      return timeseries.get(0).id();
+    }
+
+    @Override
+    public Collection<TS<?>> timeseries() {
+      return timeseries;
+    }
+
+    @Override
+    public TS<?> timeseries(TypeToken<?> type) {
+      for (final TS<?> ts : timeseries) {
+        if (ts.type() == type) {
+          return ts;
+        }
+      }
+      return null;
+    }
+    
+    
   }
 }

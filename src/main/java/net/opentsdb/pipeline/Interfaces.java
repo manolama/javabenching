@@ -3,6 +3,7 @@ package net.opentsdb.pipeline;
 import java.util.Collection;
 import java.util.Iterator;
 
+import com.google.common.reflect.TypeToken;
 import com.stumbleupon.async.Deferred;
 
 import net.opentsdb.data.TimeSeriesDataType;
@@ -31,14 +32,21 @@ public class Interfaces {
     public void onError(Throwable t);
   }
   
+  /** a set of differently typed time series iterators sharing a common ID. */
+  public interface TSs {
+    public TimeSeriesId id();
+    public Collection<TS<?>> timeseries();
+    public TS<?> timeseries(TypeToken<?> type);
+  }
+  
   /** Time series interface */
   public interface TS<T extends TimeSeriesDataType> {
     public TimeSeriesId id();
     public Iterator<TimeSeriesValue<T>> iterator();
-    public void setCache(boolean cache);
+    public TypeToken<T> type();
   }
   
-  public interface TSProcessor<T extends TimeSeriesDataType> {
+  public interface TSProcessor {
     
   }
 
