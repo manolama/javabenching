@@ -24,6 +24,7 @@ import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Abstracts.*;
 import net.opentsdb.pipeline.Functions.*;
+import net.opentsdb.pipeline.Implementations.*;
 import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 
@@ -33,8 +34,8 @@ import net.opentsdb.utils.Bytes;
 public class TimeSortedDataStore {
   public static final long HOSTS = 4;
   public static final long INTERVAL = 1000;
-  public static final long INTERVALS = 6;
-  public static final int INTERVALS_PER_CHUNK = 3;
+  public static final long INTERVALS = 8;
+  public static final int INTERVALS_PER_CHUNK = 4;
   public static final List<String> DATACENTERS = Lists.newArrayList(
       "PHX", "LGA", "LAX", "DEN");
   public static final List<String> METRICS = Lists.newArrayList(
@@ -79,6 +80,7 @@ public class TimeSortedDataStore {
     
     @Override
     public void fetchNext() {
+      System.out.println(".... fetching from store");
       if (reverse_chunks ? ts <= start_ts : ts >= start_ts + (INTERVALS * INTERVAL)) {
         listener.onComplete();
         return;
@@ -114,7 +116,7 @@ public class TimeSortedDataStore {
         
         TS<?> t = time_series.get(timeseries.get(x));
         if (t == null) {
-          t = new MyNumTS(timeseries.get(x));
+          t = new ArrayBackedLongTS(timeseries.get(x));
           time_series.put(timeseries.get(x), t);
         }
         ((MyTS<?>) t).nextChunk(payload);
@@ -212,34 +214,5 @@ public class TimeSortedDataStore {
     
   }
   
-  public static class MyNumTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
-    
-    TimeStamp ts = new MillisecondTimeStamp(0);
-    MutableNumericType dp;
-    
-    public MyNumTS(final TimeSeriesId id) {
-      super(id);
-      dp = new MutableNumericType(id);
-    }
-    
-    @Override
-    public Iterator<TimeSeriesValue<NumericType>> iterator() {
-      return this;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return idx < dps.length;
-    }
-
-    @Override
-    public TimeSeriesValue<NumericType> next() {
-      ts.updateMsEpoch(Bytes.getLong(dps, idx));
-      idx += 8;
-      dp.reset(ts, Bytes.getLong(dps, idx), 1);
-      idx += 8;
-      return dp;
-    }
-  }
   
 }

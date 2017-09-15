@@ -17,13 +17,8 @@ import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
-import net.opentsdb.pipeline.Interfaces.QExecutionPipeline;
-import net.opentsdb.pipeline.Interfaces.QResult;
-import net.opentsdb.pipeline.Interfaces.QueryMode;
-import net.opentsdb.pipeline.Interfaces.StreamListener;
-import net.opentsdb.pipeline.Interfaces.TS;
-import net.opentsdb.pipeline.Interfaces.TSProcessor;
-import net.opentsdb.pipeline.TimeSortedDataStore.MyNumTS;
+import net.opentsdb.pipeline.Implementations.*;
+import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 import net.opentsdb.utils.Pair;
 
@@ -258,13 +253,14 @@ public class Functions {
           upstream.onComplete();
           return;
         }
+        
         // work from cache.
         // TODO - fall through in case the cache has been exhausted. That'll get ugly.
         Map<TimeSeriesId, byte[]> chunk = local_cache.get(cache_idx++);
         for (Entry<TimeSeriesId, byte[]> entry : chunk.entrySet()) {
-          MyNumTS extant = (MyNumTS) time_series.get(entry.getKey());
+          ArrayBackedLongTS extant = (ArrayBackedLongTS) time_series.get(entry.getKey());
           if (extant == null) {
-            extant = new MyNumTS(entry.getKey());
+            extant = new ArrayBackedLongTS(entry.getKey());
             time_series.put(entry.getKey(), extant);
           }
           extant.nextChunk(entry.getValue());
