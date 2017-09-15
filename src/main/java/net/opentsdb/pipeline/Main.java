@@ -21,10 +21,12 @@ public class Main {
    * calls {@link QExecutionPipeline#fetchNext()}.
    */
   public static void version1() {
+    QueryMode mode = QueryMode.CLIENT_STREAM;
+    
     /** This section would be hidden behind the query engine. Users just 
      * submit the query and the call graph is setup, yada yada. */
     TimeSortedDataStore store = new TimeSortedDataStore();
-    QExecutionPipeline exec = store.new MyExecution(true);
+    QExecutionPipeline exec = store.new MyExecution(true, mode);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);
     /** END QUERY ENGINE BIT */
@@ -76,7 +78,9 @@ public class Main {
           System.out.println("-------------------------");
           
           iterations++;
-          exec.fetchNext();
+          if (mode == QueryMode.CLIENT_STREAM) {
+            exec.fetchNext();
+          }
         } catch (Exception e) {
           e.printStackTrace();
         }
@@ -96,7 +100,7 @@ public class Main {
     exec.fetchNext();
     
     try {
-      listener.d.join(10000);
+      listener.d.join();
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();

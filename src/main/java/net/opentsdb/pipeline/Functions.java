@@ -7,8 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.stumbleupon.async.Deferred;
-
 import avro.shaded.com.google.common.collect.Lists;
 import avro.shaded.com.google.common.collect.Maps;
 import avro.shaded.com.google.common.collect.Sets;
@@ -21,6 +19,7 @@ import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Interfaces.QExecutionPipeline;
 import net.opentsdb.pipeline.Interfaces.QResult;
+import net.opentsdb.pipeline.Interfaces.QueryMode;
 import net.opentsdb.pipeline.Interfaces.StreamListener;
 import net.opentsdb.pipeline.Interfaces.TS;
 import net.opentsdb.pipeline.Interfaces.TSProcessor;
@@ -29,6 +28,10 @@ import net.opentsdb.utils.Pair;
 
 public class Functions {
 
+  /**
+   * Simple SUMming group by. No interpolation at this point, just assumes zero
+   * if a series doesn't have a value at some point.
+   */
   public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
@@ -247,7 +250,6 @@ public class Functions {
     
     @Override
     public void fetchNext() {
-
       downstream.fetchNext();
     }
     
@@ -271,8 +273,19 @@ public class Functions {
       this.cache = cache;
     }
     
+    @Override
+    public QueryMode getMode() {
+      return downstream.getMode();
+    }
   }
 
+  /**
+   * Two pass processor that iterates over the entire stream, accumulating the 
+   * sum of squares and counts. This is performed on the first call to {@link #fetchNext()}.
+   * After that's done then we will setup iterators for every time series encountered
+   * and store the standard deviation. Then when the upstream caller starts iterating,
+   * we return the difference for the data point from the standard deviation.
+   */
   public static class DiffFromStdD implements TSProcessor<NumericType>, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
@@ -413,7 +426,7 @@ public class Functions {
           time_series.put(it.id(), it);
         }
         
-        fetchNext();
+        DiffFromStdD.this.fetchNext();
       }
 
       @Override
@@ -439,6 +452,11 @@ public class Functions {
         DiffFromStdD.this.onError(t);
       }
       
+    }
+
+    @Override
+    public QueryMode getMode() {
+      return downstream.getMode();
     }
   }
   

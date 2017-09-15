@@ -27,6 +27,9 @@ import net.opentsdb.pipeline.Functions.*;
 import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 
+/**
+ * And example data source. It just
+ */
 public class TimeSortedDataStore {
   public static final long HOSTS = 4;
   public static final long INTERVAL = 1000;
@@ -63,19 +66,20 @@ public class TimeSortedDataStore {
     StreamListener listener;
     long ts;
     boolean is_multipass = false;
+    QueryMode mode;
     
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
     Results results = new Results(time_series);
     
-    public MyExecution(boolean reverse_chunks) {
+    public MyExecution(boolean reverse_chunks, QueryMode mode) {
       this.reverse_chunks = reverse_chunks;
       ts = reverse_chunks ? start_ts + INTERVALS * INTERVAL : start_ts;
+      this.mode = mode;
     }
     
     @Override
     public void fetchNext() {
-      if (reverse_chunks ? ts <= start_ts : 
-        ts >= start_ts + (INTERVALS * INTERVAL)) {
+      if (reverse_chunks ? ts <= start_ts : ts >= start_ts + (INTERVALS * INTERVAL)) {
         listener.onComplete();
         return;
       }
@@ -122,14 +126,27 @@ public class TimeSortedDataStore {
       }
       
       CompletableFuture<Void> f = CompletableFuture.supplyAsync(this, pool);
-      if (reverse_chunks && ts <= start_ts) {
-        f.thenAccept(obj -> {
-          listener.onComplete();
-        });
-      } else if (ts >= start_ts + (INTERVALS * INTERVAL)) {
-        f.thenAccept(obj -> {
-          listener.onComplete();
-        });
+      switch (mode) {
+      case SINGLE:
+      case CLIENT_STREAM:
+        // nothing to do here
+        break;
+      case SERVER_SYNC_STREAM:
+        // TODO - walk to the ROOT execution and call that.
+        if (reverse_chunks && ts <= start_ts) {
+          f.thenAccept(obj -> {
+            fetchNext();
+          });
+        } else if (ts >= start_ts + (INTERVALS * INTERVAL)) {
+          f.thenAccept(obj -> {
+            fetchNext();
+          });
+        }
+        break;
+      case SERVER_ASYNC_STREAM:
+        // TODO - walk to the ROOT execution and call that.
+        fetchNext();
+        break;
       }
     }
 
@@ -152,7 +169,7 @@ public class TimeSortedDataStore {
     @Override
     public QExecutionPipeline getMultiPassClone(StreamListener listener) {
       is_multipass = true;
-      QExecutionPipeline ex = new MyExecution(reverse_chunks);
+      QExecutionPipeline ex = new MyExecution(reverse_chunks, mode);
       ex.setListener(listener);
       return ex;
     }
@@ -161,6 +178,11 @@ public class TimeSortedDataStore {
     public void setCache(boolean cache) {
       // TODO Auto-generated method stub
       
+    }
+
+    @Override
+    public QueryMode getMode() {
+      return mode;
     }
     
   }
@@ -218,28 +240,6 @@ public class TimeSortedDataStore {
       idx += 8;
       return dp;
     }
-  }
-  
-  class MyStringTS implements TS<AnnotationType> {
-
-    @Override
-    public TimeSeriesId id() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public Iterator<TimeSeriesValue<AnnotationType>> iterator() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public void setCache(boolean cache) {
-      // TODO Auto-generated method stub
-      
-    }
-    
   }
   
 }
