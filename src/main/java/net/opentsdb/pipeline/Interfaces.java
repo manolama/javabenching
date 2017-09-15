@@ -9,6 +9,7 @@ import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.Interfaces.StreamListener;
 
 public class Interfaces {
   private Interfaces() { }
@@ -47,6 +48,8 @@ public class Interfaces {
     public StreamListener getListener();
     public boolean endOfStream();
     public void fetchNext();
+    public QExecution getMultiPassClone(StreamListener listener);
+    public void setCache(boolean cache);
   }
   
   public interface QExecutor {

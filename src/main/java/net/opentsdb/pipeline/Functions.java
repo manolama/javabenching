@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.stumbleupon.async.Deferred;
@@ -23,19 +24,23 @@ import net.opentsdb.pipeline.Interfaces.QResult;
 import net.opentsdb.pipeline.Interfaces.StreamListener;
 import net.opentsdb.pipeline.Interfaces.TS;
 import net.opentsdb.pipeline.Interfaces.TSProcessor;
+import net.opentsdb.utils.Pair;
 
 public class Functions {
 
   public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult, QExecution {
     StreamListener upstream;
-    QExecution downstream_execution;
-    
+    QExecution downstream;
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
+    GroupBy parent;
+    boolean cache = false;
+    
+    protected GroupBy() { }
     
     public GroupBy(QExecution downstream_execution) {
       this.upstream = downstream_execution.getListener();
-      this.downstream_execution = downstream_execution;
+      this.downstream = downstream_execution;
       downstream_execution.setListener(this);
     }
     
@@ -220,17 +225,211 @@ public class Functions {
 
     @Override
     public boolean endOfStream() {
-      return downstream_execution.endOfStream();
+      return downstream.endOfStream();
     }
 
     @Override
     public void fetchNext() {
-      downstream_execution.fetchNext();
+      downstream.fetchNext();
     }
     
     @Override
     public StreamListener getListener() {
       return upstream;
+    }
+
+    
+    @Override
+    public QExecution getMultiPassClone(StreamListener listener) {
+      GroupBy clone = new GroupBy();
+      clone.downstream = downstream.getMultiPassClone(clone);
+      clone.parent = this;
+      clone.cache = true;
+      clone.upstream = listener;
+      return clone;
+    }
+
+    @Override
+    public void setCache(boolean cache) {
+      this.cache = cache;
+    }
+    
+  }
+
+  public static class DiffFromStdD implements TSProcessor<NumericType>, StreamListener, QResult, QExecution {
+    StreamListener upstream;
+    QExecution downstream;
+    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesId, Pair<Long, Double>> sums = Maps.newHashMap();
+    Set<Integer> hashes = Sets.newHashSet();
+    boolean initialized = false;
+    
+    public DiffFromStdD(QExecution downstream_execution) {
+      this.upstream = downstream_execution.getListener();
+      this.downstream = downstream_execution;
+      downstream_execution.setListener(this);
+    }
+    
+    @Override
+    public void setListener(StreamListener listener) {
+      upstream = listener;
+    }
+
+    @Override
+    public StreamListener getListener() {
+      return upstream;
+    }
+
+    @Override
+    public boolean endOfStream() {
+      return downstream.endOfStream();
+    }
+
+    @Override
+    public void fetchNext() {
+      if (initialized) {
+        downstream.fetchNext();
+      } else {
+        FirstPassListener fpl = new FirstPassListener();
+        QExecution fp = downstream.getMultiPassClone(fpl);
+        fpl.downstream = fp;
+        initialized = true;
+        fp.fetchNext();
+      }
+    }
+
+    @Override
+    public Collection<TS<?>> series() {
+      return time_series.values();
+    }
+
+    @Override
+    public Throwable exception() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public boolean hasException() {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
+    @Override
+    public void onComplete() {
+      upstream.onComplete();
+    }
+
+    @Override
+    public void onNext(QResult next) {
+      for (TS<?> ts : next.series()) {
+        SIt it = (SIt) time_series.get(ts.id());
+        it.source = (TS<NumericType>) ts;
+      }
+
+      upstream.onNext(this);
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      upstream.onError(t);
+    }
+
+    @Override
+    public QExecution getMultiPassClone(StreamListener listener) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+    
+    public void setCache(boolean cache) {
+      // TODO Auto-generated method stub
+    }
+    
+    class SIt implements TS<NumericType>, Iterator<TimeSeriesValue<NumericType>> {
+
+      TS<NumericType> source;
+      double stdev;
+      MutableNumericType dp;
+      
+      public SIt(final TimeSeriesId id) {
+        dp = new MutableNumericType(id);
+      }
+      
+      @Override
+      public boolean hasNext() {
+        return source == null ? false : source.iterator().hasNext();
+      }
+
+      @Override
+      public TimeSeriesValue<NumericType> next() {
+        TimeSeriesValue<NumericType> next = source.iterator().next();
+        dp.reset(next.timestamp(), stdev - next.value().toDouble(), 1);
+        return dp;
+      }
+
+      @Override
+      public TimeSeriesId id() {
+        return dp.id();
+      }
+
+      @Override
+      public Iterator<TimeSeriesValue<NumericType>> iterator() {
+        return this;
+      }
+
+      @Override
+      public void setCache(boolean cache) {
+        // TODO Auto-generated method stub
+        
+      }
+      
+    }
+
+    class FirstPassListener implements StreamListener {
+      QExecution downstream;
+      
+      @Override
+      public void onComplete() {
+        System.out.println("COMPLETE with the first pass!");
+        
+        // setup the new iterators
+        for (Entry<TimeSeriesId, Pair<Long, Double>> series : sums.entrySet()) {
+          SIt it = new SIt(series.getKey());
+          it.stdev = Math.sqrt((series.getValue().getValue() / (double)series.getValue().getKey()));
+          System.out.println("STD: " + it.stdev);
+          // PURPOSELY not setting the source here.
+          time_series.put(it.id(), it);
+        }
+        
+        fetchNext();
+      }
+
+      @Override
+      public void onNext(QResult next) {
+        for (TS<?> ts : next.series()) {
+          Pair<Long, Double> pair = sums.get(ts.id());
+          double sum_of_squares = pair == null ? 0 : pair.getValue();
+          long count = pair == null ? 0 : pair.getKey();
+          
+          Iterator<?> it = ts.iterator();
+          while(it.hasNext()) {
+            TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
+            sum_of_squares += Math.pow(v.value().toDouble(), 2);
+            count++;
+          }
+          sums.put(ts.id(), new Pair<Long, Double>(count, sum_of_squares));
+        }
+        
+        if (!downstream.endOfStream()) {
+          downstream.fetchNext();
+        }
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        DiffFromStdD.this.onError(t);
+      }
+      
     }
   }
   
