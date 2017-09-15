@@ -3,6 +3,7 @@ package net.opentsdb.pipeline;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;
@@ -41,4 +42,12 @@ public class Abstracts {
     }
   }
   
+  public static abstract class StringType implements TimeSeriesDataType {
+    /** The data type reference to pass around. */
+    public static final TypeToken<StringType> TYPE = 
+        TypeToken.of(StringType.class);
+    
+    /** Returns a list as processors (group by, downsample) may accumulate strings. */
+    public abstract List<String> values();
+  }
 }

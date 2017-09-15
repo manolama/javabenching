@@ -9,6 +9,40 @@ import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Functions.*;
 import net.opentsdb.pipeline.Interfaces.*;
 
+/**
+ * Yet Another redesign for 3.x of the Query pipeline.
+ * 
+ * The requirements are as follows:
+ * - Composable functions (group by, downsample, multi-pass topN, etc)
+ * - Streaming support as data for a query may not fit entirely in memory. Therefore
+ *   we want to stream ala Splunk, e.g. fetch, process and return now to 1h ago,
+ *   then fetch, process and return 1h to 2h ago, etc.
+ * - Balance quick-as-possible query time with minimizing memory bloat as we need to 
+ *   handle many simultaneous queries. (** This is tough! **)
+ * - Provide an easy to consume Java API for querying and working with the results.
+ *   This will, naturally, be used by the RPC APIs.
+ * - Asynchronous pipeline (with optional user facing sync ops) so we can use
+ *   threads and host resources efficiently.
+ * - Multi-type result pipelines for dealing with regular old numeric data, histograms,
+ *   annotations, status', etc.
+ * - Cachable multi-pass processors (we don't want to go all the way back to storage
+ *   if we can help it).
+ *
+ *  NOTE: This is all scratch code and needs a TON of cleanup, error handling, etc.
+ *  
+ *  Q & A:
+ *  
+ *  Q) Why not use JDK 8 Streams?
+ *  A) Turns out there is a MAJOR performance hit using streams. See the other 
+ *     JMH benchs here. It's not worth it until they can optimize the code.
+ *  
+ *  Q) Why iterators and not a simple list or array of data points?
+ *  A) TSDB used iterators in the past because it allows us to process each value
+ *     through a pipeline without keeping duplicate lists in mem. E.g. if you have
+ *     100 time series with 144 points each, and a pipeline with 5 operations, you'd
+ *     potentially need space for 72,000 dps vs 14,4000 + 500 (a buffer per op per timeseris). 
+ *  
+ */
 public class Main {
   
   public static void main(final String[] args) {
@@ -25,7 +59,7 @@ public class Main {
     
     /** This section would be hidden behind the query engine. Users just 
      * submit the query and the call graph is setup, yada yada. */
-    TimeSortedDataStore store = new TimeSortedDataStore();
+    TimeSortedDataStore store = new TimeSortedDataStore(false);
     QExecutionPipeline exec = store.new MyExecution(true, mode);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);

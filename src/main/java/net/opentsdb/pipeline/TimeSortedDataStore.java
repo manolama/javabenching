@@ -27,6 +27,7 @@ import net.opentsdb.pipeline.Functions.*;
 import net.opentsdb.pipeline.Implementations.*;
 import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
+import net.opentsdb.utils.Pair;
 
 /**
  * And example data source. It just
@@ -44,8 +45,10 @@ public class TimeSortedDataStore {
   ExecutorService pool = Executors.newFixedThreadPool(1);
   List<TimeSeriesId> timeseries;
   long start_ts = 0; // in ms
+  boolean with_strings;
   
-  public TimeSortedDataStore() {
+  public TimeSortedDataStore(boolean with_strings) {
+    this.with_strings = with_strings;
     timeseries = Lists.newArrayList();
     
     for (final String metric : METRICS) {
@@ -69,8 +72,9 @@ public class TimeSortedDataStore {
     boolean is_multipass = false;
     QueryMode mode;
     
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
-    Results results = new Results(time_series);
+    Map<TimeSeriesId, TS<?>> num_map = Maps.newHashMap();
+    Map<TimeSeriesId, TS<?>> string_map = Maps.newHashMap();
+    Results results = new Results(num_map, string_map);
     
     public MyExecution(boolean reverse_chunks, QueryMode mode) {
       this.reverse_chunks = reverse_chunks;
@@ -86,6 +90,7 @@ public class TimeSortedDataStore {
         return;
       }
       
+      List<Pair<Long, String>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
       for (int x = 0; x < timeseries.size(); x++) {
         if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
           continue;
@@ -101,6 +106,7 @@ public class TimeSortedDataStore {
             idx -= 8;
             System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
             idx -= 8;
+            strings.add(new Pair<Long, String>(local_ts, i % 2 == 0 ? "foo" : "bar"));
             local_ts -= INTERVAL;
           }
         } else {
@@ -110,16 +116,26 @@ public class TimeSortedDataStore {
             System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
             //System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
             idx += 8;
+            strings.add(new Pair<Long, String>(local_ts, i % 2 == 0 ? "foo" : "bar"));
             local_ts += INTERVAL;
           }
         }
         
-        TS<?> t = time_series.get(timeseries.get(x));
-        if (t == null) {
-          t = new ArrayBackedLongTS(timeseries.get(x));
-          time_series.put(timeseries.get(x), t);
+        TS<?> t = num_map.get(timeseries.get(x));
+          if (t == null) {
+            t = new ArrayBackedLongTS(timeseries.get(x));
+            num_map.put(timeseries.get(x), t);
+          }
+          ((MyTS<?>) t).nextChunk(payload);
+          
+          if (with_strings) {
+          t = string_map.get(timeseries.get(x));
+          if (t == null) {
+            t = new ListBackedStringTS(timeseries.get(x));
+            num_map.put(timeseries.get(x), t);
+          }
+          ((ListBackedStringTS) t).setStrings(strings);
         }
-        ((MyTS<?>) t).nextChunk(payload);
       }
       if (reverse_chunks) {
         ts -= INTERVALS_PER_CHUNK * INTERVAL;
@@ -191,15 +207,20 @@ public class TimeSortedDataStore {
   
   public static class Results implements QResult {
 
-    Map<TimeSeriesId, TS<?>> time_series;
+    Map<TimeSeriesId, TS<?>> num_map;
+    Map<TimeSeriesId, TS<?>> string_map;
     
-    public Results(Map<TimeSeriesId, TS<?>> time_series) {
-      this.time_series = time_series;
+    public Results(Map<TimeSeriesId, TS<?>> num_map, Map<TimeSeriesId, TS<?>> string_map) {
+      this.num_map = num_map;
+      this.string_map = string_map;
     }
     
     @Override
     public Collection<TS<?>> series() {
-      return time_series.values();
+      List<TS<?>> results = Lists.newArrayListWithCapacity(num_map.size() + string_map.size());
+      results.addAll(num_map.values());
+      results.addAll(string_map.values());
+      return results;
     }
 
     @Override
