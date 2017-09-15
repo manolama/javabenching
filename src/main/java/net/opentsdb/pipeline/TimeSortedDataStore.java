@@ -187,7 +187,7 @@ public class TimeSortedDataStore {
     
   }
   
-  class Results implements QResult {
+  public static class Results implements QResult {
 
     Map<TimeSeriesId, TS<?>> time_series;
     
@@ -212,7 +212,7 @@ public class TimeSortedDataStore {
     
   }
   
-  class MyNumTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
+  public static class MyNumTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
     
     TimeStamp ts = new MillisecondTimeStamp(0);
     MutableNumericType dp;

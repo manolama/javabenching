@@ -23,6 +23,7 @@ import net.opentsdb.pipeline.Interfaces.QueryMode;
 import net.opentsdb.pipeline.Interfaces.StreamListener;
 import net.opentsdb.pipeline.Interfaces.TS;
 import net.opentsdb.pipeline.Interfaces.TSProcessor;
+import net.opentsdb.pipeline.TimeSortedDataStore.MyNumTS;
 import net.opentsdb.utils.Bytes;
 import net.opentsdb.utils.Pair;
 
@@ -39,6 +40,7 @@ public class Functions {
     Set<Integer> hashes = Sets.newHashSet();
     GroupBy parent;
     boolean cache = false;
+    
     List<Map<TimeSeriesId, byte[]>> local_cache = Lists.newArrayList();
     int cache_idx = 0;
     
@@ -58,7 +60,7 @@ public class Functions {
     @Override
     public void onNext(QResult next) {
       if (cache) {
-        local_cache.add(Maps.newHashMap());
+        parent.local_cache.add(Maps.newHashMap());
       }
       
       //System.out.println("Received next...");
@@ -115,10 +117,6 @@ public class Functions {
       }
       
       public void reset() {
-        if (cache && cache_idx > 0) {
-          Map<TimeSeriesId, byte[]> c = local_cache.get(local_cache.size() - 1);
-          c.put(id, data);
-        }
         has_next = false;
         for (final TS<NumericType> source : sources) {
           if (source.iterator().hasNext()) {
@@ -129,6 +127,7 @@ public class Functions {
         first_run = true;
         next_ts = Long.MAX_VALUE;
         cache_idx = 0;
+        data = cache ? new byte[TimeSortedDataStore.INTERVALS_PER_CHUNK * 16] : null;
       }
       
       public void addSource(TS<NumericType> source) {
@@ -215,9 +214,13 @@ public class Functions {
           cache_idx += 8;
           System.arraycopy(Bytes.fromLong(dp.longValue()), 0, data, cache_idx, 8);
           cache_idx += 8;
+          if (!has_next) {
+            Map<TimeSeriesId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
+            c.put(id, data);
+          }
         }
         next_ts = next_next_ts;
-        //System.out.println("Returning dp: " + dp.timestamp() + " " + dp.toDouble());
+
         return dp;
         } catch (Exception e){ 
           e.printStackTrace();
@@ -250,7 +253,27 @@ public class Functions {
     
     @Override
     public void fetchNext() {
-      downstream.fetchNext();
+      if (local_cache.size() > 0) {
+        if (cache_idx >= local_cache.size()) {
+          upstream.onComplete();
+          return;
+        }
+        // work from cache.
+        // TODO - fall through in case the cache has been exhausted. That'll get ugly.
+        Map<TimeSeriesId, byte[]> chunk = local_cache.get(cache_idx++);
+        for (Entry<TimeSeriesId, byte[]> entry : chunk.entrySet()) {
+          MyNumTS extant = (MyNumTS) time_series.get(entry.getKey());
+          if (extant == null) {
+            extant = new MyNumTS(entry.getKey());
+            time_series.put(entry.getKey(), extant);
+          }
+          extant.nextChunk(entry.getValue());
+        }
+        System.out.println("FED FROM CACHE!");
+        upstream.onNext(this);
+      } else {
+        downstream.fetchNext();
+      }
     }
     
     @Override

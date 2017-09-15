@@ -8,8 +8,6 @@ import com.stumbleupon.async.Deferred;
 import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
-import net.opentsdb.data.types.numeric.NumericType;
-import net.opentsdb.pipeline.Interfaces.StreamListener;
 
 public class Interfaces {
   private Interfaces() { }
