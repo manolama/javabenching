@@ -10,41 +10,62 @@ import net.opentsdb.pipeline.Functions.*;
 import net.opentsdb.pipeline.Interfaces.*;
 
 public class Main {
+  
   public static void main(final String[] args) {
+    version1();
+  }
+  
+  /**
+   * In this case the API gives a QueryExecutionPipeline that the user would
+   * provide an asynchronous listener. To initiate the stream, the caller just
+   * calls {@link QExecutionPipeline#fetchNext()}.
+   */
+  public static void version1() {
+    /** This section would be hidden behind the query engine. Users just 
+     * submit the query and the call graph is setup, yada yada. */
     TimeSortedDataStore store = new TimeSortedDataStore();
-    QExecution exec = store.new MyExecution(true);
-    exec = (QExecution) new GroupBy(exec);
-    exec = (QExecution) new DiffFromStdD(exec);
+    QExecutionPipeline exec = store.new MyExecution(true);
+    exec = (QExecutionPipeline) new GroupBy(exec);
+    exec = (QExecutionPipeline) new DiffFromStdD(exec);
+    /** END QUERY ENGINE BIT */
     
+    /**
+     * Here's where the API consumer does their work.
+     */
     class MyListener implements StreamListener {
-      QExecution exec;
+      QExecutionPipeline exec;
       int iterations = 0;
       Deferred<Object> d = new Deferred<Object>();
       
-      public MyListener(QExecution exec) {
+      public MyListener(QExecutionPipeline exec) {
         this.exec = exec;
+        exec.setListener(this);
       }
       
+      /**
+       * This is called by the execution pipeline when the final call to 
+       * fetchNext() will not return data.
+       */
       @Override
       public void onComplete() {
         System.out.println("DONE after " + iterations + " iterations");
         d.callback(null);
       }
 
+      /**
+       * This is called each time a successful (possibly empty) result is returned
+       * from the execution. It will either contain:
+       * - The entire time range of data for one or more time series 
+       * - or all of the time series for a slice of the query range. In this case
+       *   subsequent onNext() results may contain different time series iterators. 
+       */
       @Override
       public void onNext(QResult next) {
         try {
-          System.out.println("Gonna iterate me some data");
+          
+          // consumers can iterate over each series and then iterate over the dps 
+          // within that series.
           for (TS<?> ts : next.series()) {
-  //          if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), ts.id().metrics().get(0)) != 0) {
-  //            continue;
-  //          }
-  //          if (Bytes.memcmp("PHX".getBytes(Const.UTF8_CHARSET), ts.id().tags().get("dc".getBytes(Const.UTF8_CHARSET))) != 0) {
-  //            continue;
-  //          }
-  //          if (Bytes.memcmp("web01".getBytes(Const.UTF8_CHARSET), ts.id().tags().get("host".getBytes(Const.UTF8_CHARSET))) != 0) {
-  //            continue;
-  //          }
             System.out.println(ts.id());
             Iterator<?> it = ts.iterator();
             while (it.hasNext()) {
@@ -55,9 +76,7 @@ public class Main {
           System.out.println("-------------------------");
           
           iterations++;
-          if (!exec.endOfStream()) {
-            exec.fetchNext();
-          }
+          exec.fetchNext();
         } catch (Exception e) {
           e.printStackTrace();
         }
@@ -70,8 +89,10 @@ public class Main {
       
     }
     
+    // instantiate a new listener to asyncronously receive data
     MyListener listener = new MyListener(exec);
-    exec.setListener(listener);
+    
+    // start the iteration.
     exec.fetchNext();
     
     try {
@@ -83,6 +104,8 @@ public class Main {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+    
     store.pool.shutdownNow();
   }
+  
 }

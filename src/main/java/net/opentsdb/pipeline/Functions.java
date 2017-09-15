@@ -19,26 +19,29 @@ import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
-import net.opentsdb.pipeline.Interfaces.QExecution;
+import net.opentsdb.pipeline.Interfaces.QExecutionPipeline;
 import net.opentsdb.pipeline.Interfaces.QResult;
 import net.opentsdb.pipeline.Interfaces.StreamListener;
 import net.opentsdb.pipeline.Interfaces.TS;
 import net.opentsdb.pipeline.Interfaces.TSProcessor;
+import net.opentsdb.utils.Bytes;
 import net.opentsdb.utils.Pair;
 
 public class Functions {
 
-  public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult, QExecution {
+  public static class GroupBy implements TSProcessor<NumericType>, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
-    QExecution downstream;
+    QExecutionPipeline downstream;
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
     GroupBy parent;
     boolean cache = false;
+    List<Map<TimeSeriesId, byte[]>> local_cache = Lists.newArrayList();
+    int cache_idx = 0;
     
     protected GroupBy() { }
     
-    public GroupBy(QExecution downstream_execution) {
+    public GroupBy(QExecutionPipeline downstream_execution) {
       this.upstream = downstream_execution.getListener();
       this.downstream = downstream_execution;
       downstream_execution.setListener(this);
@@ -51,8 +54,13 @@ public class Functions {
 
     @Override
     public void onNext(QResult next) {
+      if (cache) {
+        local_cache.add(Maps.newHashMap());
+      }
+      
       //System.out.println("Received next...");
       for (TS<?> ts : next.series()) {
+        
         if (hashes.contains(ts.hashCode())) {
           continue;
         }
@@ -76,6 +84,7 @@ public class Functions {
         ((GBIterator) it).reset();
       }
       //System.out.println("Calling up: " + time_series.size());
+      
       upstream.onNext(this);
     }
 
@@ -88,6 +97,8 @@ public class Functions {
       TimeSeriesId id;
       List<TS<NumericType>> sources;
       List<MutableNumericType> values;
+      byte[] data = cache ? new byte[TimeSortedDataStore.INTERVALS_PER_CHUNK * 16] : null;
+      int cache_idx = 0;
       
       boolean first_run = true;
       boolean has_next = false;
@@ -101,6 +112,10 @@ public class Functions {
       }
       
       public void reset() {
+        if (cache && cache_idx > 0) {
+          Map<TimeSeriesId, byte[]> c = local_cache.get(local_cache.size() - 1);
+          c.put(id, data);
+        }
         has_next = false;
         for (final TS<NumericType> source : sources) {
           if (source.iterator().hasNext()) {
@@ -110,6 +125,7 @@ public class Functions {
         }
         first_run = true;
         next_ts = Long.MAX_VALUE;
+        cache_idx = 0;
       }
       
       public void addSource(TS<NumericType> source) {
@@ -163,7 +179,7 @@ public class Functions {
         }
         
         long next_next_ts = Long.MAX_VALUE;
-        double sum = 0;
+        long sum = 0;
         for (int i = 0; i < sources.size(); i++) {
           TimeSeriesValue<NumericType> v = values.get(i);
           if (v == null) {
@@ -171,7 +187,7 @@ public class Functions {
             continue;
           }
           if (v.timestamp().msEpoch() == next_ts) {
-            sum += v.value().toDouble();
+            sum += v.value().longValue();
             if (sources.get(i).iterator().hasNext()) {
               v = sources.get(i).iterator().next();
               if (v.timestamp().msEpoch() < next_next_ts) {
@@ -191,6 +207,12 @@ public class Functions {
         }
         
         dp.reset(new MillisecondTimeStamp(next_ts), sum, 1);
+        if (cache) {
+          System.arraycopy(Bytes.fromLong(dp.timestamp().msEpoch()), 0, data, cache_idx, 8);
+          cache_idx += 8;
+          System.arraycopy(Bytes.fromLong(dp.longValue()), 0, data, cache_idx, 8);
+          cache_idx += 8;
+        }
         next_ts = next_next_ts;
         //System.out.println("Returning dp: " + dp.timestamp() + " " + dp.toDouble());
         return dp;
@@ -222,14 +244,10 @@ public class Functions {
     public void setListener(StreamListener listener) {
       upstream = listener;
     }
-
-    @Override
-    public boolean endOfStream() {
-      return downstream.endOfStream();
-    }
-
+    
     @Override
     public void fetchNext() {
+
       downstream.fetchNext();
     }
     
@@ -238,9 +256,8 @@ public class Functions {
       return upstream;
     }
 
-    
     @Override
-    public QExecution getMultiPassClone(StreamListener listener) {
+    public QExecutionPipeline getMultiPassClone(StreamListener listener) {
       GroupBy clone = new GroupBy();
       clone.downstream = downstream.getMultiPassClone(clone);
       clone.parent = this;
@@ -256,15 +273,15 @@ public class Functions {
     
   }
 
-  public static class DiffFromStdD implements TSProcessor<NumericType>, StreamListener, QResult, QExecution {
+  public static class DiffFromStdD implements TSProcessor<NumericType>, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
-    QExecution downstream;
+    QExecutionPipeline downstream;
     Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
     Map<TimeSeriesId, Pair<Long, Double>> sums = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
     boolean initialized = false;
     
-    public DiffFromStdD(QExecution downstream_execution) {
+    public DiffFromStdD(QExecutionPipeline downstream_execution) {
       this.upstream = downstream_execution.getListener();
       this.downstream = downstream_execution;
       downstream_execution.setListener(this);
@@ -279,19 +296,14 @@ public class Functions {
     public StreamListener getListener() {
       return upstream;
     }
-
-    @Override
-    public boolean endOfStream() {
-      return downstream.endOfStream();
-    }
-
+    
     @Override
     public void fetchNext() {
       if (initialized) {
         downstream.fetchNext();
       } else {
         FirstPassListener fpl = new FirstPassListener();
-        QExecution fp = downstream.getMultiPassClone(fpl);
+        QExecutionPipeline fp = downstream.getMultiPassClone(fpl);
         fpl.downstream = fp;
         initialized = true;
         fp.fetchNext();
@@ -336,7 +348,7 @@ public class Functions {
     }
 
     @Override
-    public QExecution getMultiPassClone(StreamListener listener) {
+    public QExecutionPipeline getMultiPassClone(StreamListener listener) {
       // TODO Auto-generated method stub
       return null;
     }
@@ -386,7 +398,7 @@ public class Functions {
     }
 
     class FirstPassListener implements StreamListener {
-      QExecution downstream;
+      QExecutionPipeline downstream;
       
       @Override
       public void onComplete() {
@@ -419,10 +431,7 @@ public class Functions {
           }
           sums.put(ts.id(), new Pair<Long, Double>(count, sum_of_squares));
         }
-        
-        if (!downstream.endOfStream()) {
-          downstream.fetchNext();
-        }
+        downstream.fetchNext();
       }
 
       @Override

@@ -36,19 +36,12 @@ public class Interfaces {
   public interface TSProcessor<T extends TimeSeriesDataType> {
     
   }
-  
-  public interface QPipeline {
-    public void setListener(StreamListener l);
-    public boolean endOfStream();
-    public void fetchNext();
-  }
-  
-  public interface QExecution {
+
+  public interface QExecutionPipeline {
     public void setListener(StreamListener listener);
     public StreamListener getListener();
-    public boolean endOfStream();
     public void fetchNext();
-    public QExecution getMultiPassClone(StreamListener listener);
+    public QExecutionPipeline getMultiPassClone(StreamListener listener);
     public void setCache(boolean cache);
   }
   

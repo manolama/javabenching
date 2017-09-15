@@ -58,7 +58,7 @@ public class TimeSortedDataStore {
     }
   }
   
-  class MyExecution implements QExecution, Supplier<Void> {
+  class MyExecution implements QExecutionPipeline, Supplier<Void> {
     boolean reverse_chunks = false;
     StreamListener listener;
     long ts;
@@ -73,13 +73,12 @@ public class TimeSortedDataStore {
     }
     
     @Override
-    public boolean endOfStream() {
-      return reverse_chunks ? ts <= start_ts : 
-        ts >= start_ts + (INTERVALS * INTERVAL);
-    }
-
-    @Override
     public void fetchNext() {
+      if (reverse_chunks ? ts <= start_ts : 
+        ts >= start_ts + (INTERVALS * INTERVAL)) {
+        listener.onComplete();
+        return;
+      }
       
       for (int x = 0; x < timeseries.size(); x++) {
         if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
@@ -151,9 +150,9 @@ public class TimeSortedDataStore {
     }
 
     @Override
-    public QExecution getMultiPassClone(StreamListener listener) {
+    public QExecutionPipeline getMultiPassClone(StreamListener listener) {
       is_multipass = true;
-      QExecution ex = new MyExecution(reverse_chunks);
+      QExecutionPipeline ex = new MyExecution(reverse_chunks);
       ex.setListener(listener);
       return ex;
     }
