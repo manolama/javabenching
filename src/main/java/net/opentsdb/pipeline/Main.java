@@ -65,6 +65,7 @@ public class Main {
     exec = (QExecutionPipeline) new FilterNumsByString(exec);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);
+    exec = (QExecutionPipeline) new ExpressionProc(exec);
     /** END QUERY ENGINE BIT */
     
     /**

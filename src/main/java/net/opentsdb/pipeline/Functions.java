@@ -672,4 +672,168 @@ public class Functions {
     }
   }
   
+  public static class ExpressionProc implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
+    StreamListener upstream;
+    QExecutionPipeline downstream;
+    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Set<Integer> hashes = Sets.newHashSet();
+    
+    public ExpressionProc(QExecutionPipeline downstream_execution) {
+      this.upstream = downstream_execution.getListener();
+      this.downstream = downstream_execution;
+      downstream_execution.setListener(this);
+    }
+    
+    @Override
+    public void setListener(StreamListener listener) {
+      upstream = listener;      
+    }
+
+    @Override
+    public StreamListener getListener() {
+      return upstream;
+    }
+
+    @Override
+    public void fetchNext() {
+      downstream.fetchNext();
+    }
+
+    @Override
+    public QExecutionPipeline getMultiPassClone(StreamListener listener) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public void setCache(boolean cache) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public QueryMode getMode() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Collection<TS<?>> series() {
+      return time_series.values();
+    }
+
+    @Override
+    public Throwable exception() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public boolean hasException() {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
+    @Override
+    public void onComplete() {
+      upstream.onComplete();
+    }
+
+    @Override
+    public void onNext(QResult next) {
+      for (TS<?> ts : next.series()) {
+        if (ts.type() != NumericType.TYPE) {
+          continue;
+        }
+        if (hashes.contains(ts.hashCode())) {
+          continue;
+        }
+        
+        SimpleStringTimeSeriesId.Builder builder = SimpleStringTimeSeriesId.newBuilder()
+            .addMetric("Sum of if in and out");
+        for (Entry<byte[], byte[]> pair : ts.id().tags().entrySet()) {
+          builder.addTags(new String(pair.getKey(), Const.UTF8_CHARSET), 
+              new String(pair.getValue(), Const.UTF8_CHARSET));
+        }
+        for (byte[] tag : ts.id().aggregatedTags()) {
+          builder.addAggregatedTag(new String(tag, Const.UTF8_CHARSET));
+        }
+        
+        TS<?> it = time_series.get(builder.build());
+        if (it == null) {
+          it = new ExpressionIterator(builder.build());
+          time_series.put(builder.build(), it);
+        }
+        ((ExpressionIterator) it).addSeries(ts);
+      }
+      upstream.onNext(this);
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      upstream.onError(t);
+    }
+    
+    class ExpressionIterator implements TS<NumericType>, Iterator<TimeSeriesValue<NumericType>> {
+      Map<String, TS<?>> series = Maps.newHashMap();
+      boolean has_next = false;
+      MutableNumericType dp;
+      
+      public ExpressionIterator(TimeSeriesId id) {
+        dp = new MutableNumericType(id);
+      }
+      
+      public void addSeries(TS<?> ts) {
+        if (Bytes.memcmp(ts.id().metrics().get(0), "sys.if.out".getBytes(Const.UTF8_CHARSET)) == 0) {
+          series.put("sys.if.out", ts);
+        } else {
+          series.put("sys.if.in", ts);
+        }
+        if (!has_next) {
+          has_next = ts.iterator().hasNext();
+        }
+      }
+      
+      @Override
+      public boolean hasNext() {
+        return has_next;
+      }
+
+      @Override
+      public TimeSeriesValue<NumericType> next() {
+        double sum = 0;
+        long timestamp = Long.MAX_VALUE;
+        has_next = false;
+        // TODO - we'd actually bind variables properly here and count the reals.
+        for (TS<?> ts : series.values()) {
+          TimeSeriesValue<NumericType> v = ((TimeSeriesValue<NumericType>) ts.iterator().next());
+          sum += v.value().toDouble();
+          if (v.timestamp().msEpoch() < timestamp) {
+            timestamp = v.timestamp().msEpoch();
+          }
+          if (!has_next) {
+            has_next = ts.iterator().hasNext();
+          }
+        }
+        dp.reset(new MillisecondTimeStamp(timestamp), sum, series.size());
+        return dp;
+      }
+
+      @Override
+      public TimeSeriesId id() {
+        return dp.id();
+      }
+
+      @Override
+      public Iterator<TimeSeriesValue<NumericType>> iterator() {
+        return this;
+      }
+
+      @Override
+      public TypeToken<NumericType> type() {
+        return NumericType.TYPE;
+      }
+      
+    }
+  }
 }

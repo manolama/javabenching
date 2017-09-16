@@ -91,7 +91,8 @@ public class TimeSortedDataStore {
       }
       
       for (int x = 0; x < timeseries.size(); x++) {
-        if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+        if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
+            Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
           continue;
         }
         List<Pair<Long, String>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
