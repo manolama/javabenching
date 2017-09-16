@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import com.google.common.reflect.TypeToken;
-import com.stumbleupon.async.Deferred;
 
 import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;

@@ -1,6 +1,7 @@
 package net.opentsdb.pipeline;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,6 @@ public class TimeSortedDataStore {
     boolean reverse_chunks = false;
     StreamListener listener;
     long ts;
-    boolean is_multipass = false;
     QueryMode mode;
     
     Map<TimeSeriesId, TS<?>> num_map = Maps.newHashMap();
@@ -90,11 +90,11 @@ public class TimeSortedDataStore {
         return;
       }
       
-      List<Pair<Long, String>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
       for (int x = 0; x < timeseries.size(); x++) {
         if (Bytes.memcmp("web.requests".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
           continue;
         }
+        List<Pair<Long, String>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
         // for now add em all
         byte[] payload = new byte[INTERVALS_PER_CHUNK * 16];
         int idx = reverse_chunks ? payload.length - 8 : 0;
@@ -109,6 +109,7 @@ public class TimeSortedDataStore {
             strings.add(new Pair<Long, String>(local_ts, i % 2 == 0 ? "foo" : "bar"));
             local_ts -= INTERVAL;
           }
+          Collections.reverse(strings);
         } else {
           for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
             System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
@@ -122,17 +123,17 @@ public class TimeSortedDataStore {
         }
         
         TS<?> t = num_map.get(timeseries.get(x));
-          if (t == null) {
-            t = new ArrayBackedLongTS(timeseries.get(x));
-            num_map.put(timeseries.get(x), t);
-          }
-          ((MyTS<?>) t).nextChunk(payload);
+        if (t == null) {
+          t = new ArrayBackedLongTS(timeseries.get(x));
+          num_map.put(timeseries.get(x), t);
+        }
+        ((MyTS<?>) t).nextChunk(payload);
           
-          if (with_strings) {
+        if (with_strings) {
           t = string_map.get(timeseries.get(x));
           if (t == null) {
             t = new ListBackedStringTS(timeseries.get(x));
-            num_map.put(timeseries.get(x), t);
+            string_map.put(timeseries.get(x), t);
           }
           ((ListBackedStringTS) t).setStrings(strings);
         }
@@ -186,7 +187,6 @@ public class TimeSortedDataStore {
 
     @Override
     public QExecutionPipeline getMultiPassClone(StreamListener listener) {
-      is_multipass = true;
       QExecutionPipeline ex = new MyExecution(reverse_chunks, mode);
       ex.setListener(listener);
       return ex;

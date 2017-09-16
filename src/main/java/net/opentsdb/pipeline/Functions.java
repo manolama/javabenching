@@ -1,5 +1,6 @@
 package net.opentsdb.pipeline;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -19,6 +20,7 @@ import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.Abstracts.StringType;
 import net.opentsdb.pipeline.Implementations.*;
 import net.opentsdb.pipeline.Interfaces.*;
 import net.opentsdb.utils.Bytes;
@@ -32,29 +34,41 @@ public class Functions {
    * cut out half the DPs.
    */
   public static class FilterNumsByString implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
-
+    StreamListener upstream;
+    QExecutionPipeline downstream;
+    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    
+    protected FilterNumsByString() { }
+    
+    public FilterNumsByString(QExecutionPipeline downstream_execution) {
+      this.upstream = downstream_execution.getListener();
+      this.downstream = downstream_execution;
+      downstream_execution.setListener(this);
+    }
+    
     @Override
     public void setListener(StreamListener listener) {
-      // TODO Auto-generated method stub
-      
+      upstream = listener;
     }
 
     @Override
     public StreamListener getListener() {
-      // TODO Auto-generated method stub
-      return null;
+      return upstream;
     }
 
     @Override
     public void fetchNext() {
-      // TODO Auto-generated method stub
-      
+      downstream.fetchNext();
     }
 
     @Override
     public QExecutionPipeline getMultiPassClone(StreamListener listener) {
-      // TODO Auto-generated method stub
-      return null;
+      FilterNumsByString clone = new FilterNumsByString();
+      clone.downstream = downstream.getMultiPassClone(clone);
+//      clone.parent = this;
+//      clone.cache = true;
+      clone.upstream = listener;
+      return clone;
     }
 
     @Override
@@ -71,8 +85,7 @@ public class Functions {
 
     @Override
     public Collection<TS<?>> series() {
-      // TODO Auto-generated method stub
-      return null;
+      return time_series.values();
     }
 
     @Override
@@ -89,19 +102,110 @@ public class Functions {
 
     @Override
     public void onComplete() {
-      // TODO Auto-generated method stub
-      
+      upstream.onComplete();
     }
 
     @Override
     public void onNext(QResult next) {
-      // TODO Auto-generated method stub
+      for (TS<?> ts : time_series.values()) {
+        ((FilterIterator) ts).reset();
+      }
       
+      for (TS<?> ts : next.series()) {
+        TS<?> it = time_series.get(ts.id());
+        if (it == null) {
+          it = new FilterIterator();
+          time_series.put(ts.id(), it);
+        }
+        ((FilterIterator) it).setTS(ts);
+      }
+      upstream.onNext(this);
     }
 
     @Override
     public void onError(Throwable t) {
-      // TODO Auto-generated method stub
+      upstream.onError(t);
+    }
+    
+    class FilterIterator implements TS<NumericType>, Iterator<TimeSeriesValue<NumericType>> {
+      TS<NumericType> number;
+      TS<StringType> string;
+      MutableNumericType dp;
+      MutableNumericType last;
+      boolean has_next = false;
+      
+      public void setTS(TS<?> ts) {
+        if (dp == null) {
+          dp = new MutableNumericType(ts.id());
+          last = new MutableNumericType(ts.id());
+        }
+        
+        if (ts.type() == NumericType.TYPE && number == null) {
+          number = (TS<NumericType>) ts;
+        } else if (string == null) {
+          string = (TS<StringType>) ts;
+        }
+        
+        // assuming they're in sync for this demo
+        if (number != null && string != null) {
+          advance();
+        }
+      }
+      
+      public void reset() {
+        number = null;
+        string = null;
+      }
+      
+      void advance() {
+        // advance
+        has_next = false;
+        if (string.iterator().hasNext()) {
+          TimeSeriesValue<StringType> s = string.iterator().next();
+          TimeSeriesValue<NumericType> n = number.iterator().next();
+          while (s != null && !(s.value().values().get(0).equals("foo"))) {
+            if (string.iterator().hasNext()) {
+              s = string.iterator().next();
+              n = number.iterator().next();
+            } else {
+              s = null;
+              n = null;
+            }
+          }
+          
+          if (s != null) {
+            dp.reset(n);
+            has_next = true;
+          }
+        }
+      }
+      
+      @Override
+      public boolean hasNext() {
+        return has_next;
+      }
+
+      @Override
+      public TimeSeriesValue<NumericType> next() {
+        last.reset(dp);
+        advance();
+        return last;
+      }
+
+      @Override
+      public TimeSeriesId id() {
+        return number == null ? string.id() : number.id();
+      }
+
+      @Override
+      public Iterator<TimeSeriesValue<NumericType>> iterator() {
+        return this;
+      }
+
+      @Override
+      public TypeToken<NumericType> type() {
+        return NumericType.TYPE;
+      }
       
     }
     
@@ -143,7 +247,9 @@ public class Functions {
       
       //System.out.println("Received next...");
       for (TS<?> ts : next.series()) {
-        
+        if (ts.type() != NumericType.TYPE) {
+          continue;
+        }
         if (hashes.contains(ts.hashCode())) {
           continue;
         }
@@ -288,7 +394,7 @@ public class Functions {
           cache_idx += 8;
           if (!has_next) {
             Map<TimeSeriesId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
-            c.put(id, data);
+            c.put(id, Arrays.copyOf(data, cache_idx));
           }
         }
         next_ts = next_next_ts;
@@ -449,6 +555,9 @@ public class Functions {
     @Override
     public void onNext(QResult next) {
       for (TS<?> ts : next.series()) {
+        if (ts.type() != NumericType.TYPE) {
+          continue;
+        }
         SIt it = (SIt) time_series.get(ts.id());
         it.source = (TS<NumericType>) ts;
       }
@@ -532,6 +641,9 @@ public class Functions {
       @Override
       public void onNext(QResult next) {
         for (TS<?> ts : next.series()) {
+          if (ts.type() != NumericType.TYPE) {
+            continue;
+          }
           Pair<Long, Double> pair = sums.get(ts.id());
           double sum_of_squares = pair == null ? 0 : pair.getValue();
           long count = pair == null ? 0 : pair.getKey();

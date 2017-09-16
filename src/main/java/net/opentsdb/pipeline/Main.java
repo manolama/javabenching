@@ -6,6 +6,7 @@ import com.stumbleupon.async.Deferred;
 
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.Abstracts.StringType;
 import net.opentsdb.pipeline.Functions.*;
 import net.opentsdb.pipeline.Interfaces.*;
 
@@ -59,8 +60,9 @@ public class Main {
     
     /** This section would be hidden behind the query engine. Users just 
      * submit the query and the call graph is setup, yada yada. */
-    TimeSortedDataStore store = new TimeSortedDataStore(false);
+    TimeSortedDataStore store = new TimeSortedDataStore(true);
     QExecutionPipeline exec = store.new MyExecution(true, mode);
+    exec = (QExecutionPipeline) new FilterNumsByString(exec);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);
     /** END QUERY ENGINE BIT */
@@ -98,15 +100,21 @@ public class Main {
       @Override
       public void onNext(QResult next) {
         try {
-          
           // consumers can iterate over each series and then iterate over the dps 
           // within that series.
           for (TS<?> ts : next.series()) {
             System.out.println(ts.id());
             Iterator<?> it = ts.iterator();
-            while (it.hasNext()) {
-              TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
-              System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+            if (ts.type() == NumericType.TYPE) {
+              while (it.hasNext()) {
+                TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
+                System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+              }
+            } else {
+              while (it.hasNext()) {
+                TimeSeriesValue<StringType> v = (TimeSeriesValue<StringType>) it.next();
+                System.out.println("  " + v.timestamp().epoch() + " " + v.value().values());
+              }
             }
           }
           System.out.println("-------------------------");
