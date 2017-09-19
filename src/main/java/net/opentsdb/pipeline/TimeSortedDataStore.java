@@ -102,8 +102,8 @@ public class TimeSortedDataStore {
         long local_ts = ts;
         if (reverse_chunks) {
           for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
-            System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
-            //System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
+            //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+            System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
             idx -= 8;
             System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
             idx -= 8;
@@ -115,8 +115,8 @@ public class TimeSortedDataStore {
           for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
             System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
             idx += 8;
-            System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
-            //System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
+            //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+            System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
             idx += 8;
             strings.add(new Pair<Long, String>(local_ts, i % 2 == 0 ? "foo" : "bar"));
             local_ts += INTERVAL;

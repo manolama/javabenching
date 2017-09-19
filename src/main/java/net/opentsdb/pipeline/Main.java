@@ -59,9 +59,9 @@ import net.opentsdb.pipeline.Interfaces.*;
 public class Main {
   
   public static void main(final String[] args) {
-    version1();
+    //version1();
     //version1Sizes();
-    //net.opentsdb.pipeline2.Main.version2();
+    net.opentsdb.pipeline2.Main.version2();
   }
   
   /**
@@ -76,7 +76,7 @@ public class Main {
     /** This section would be hidden behind the query engine. Users just 
      * submit the query and the call graph is setup, yada yada. */
     TimeSortedDataStore store = new TimeSortedDataStore(true);
-    QExecutionPipeline exec = store.new MyExecution(true, mode);
+    QExecutionPipeline exec = store.new MyExecution(false, mode);
     exec = (QExecutionPipeline) new FilterNumsByString(exec);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);

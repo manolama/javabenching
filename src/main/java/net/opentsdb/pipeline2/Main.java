@@ -23,7 +23,7 @@ public class Main {
   public static void version2() {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     TimeSortedDataStore store = new TimeSortedDataStore(true);
-    QExecutionPipeline exec = store.new MyExecution(true, mode);
+    QExecutionPipeline exec = store.new MyExecution(false, mode);
     exec = (QExecutionPipeline) new FilterNumsByString(exec);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);

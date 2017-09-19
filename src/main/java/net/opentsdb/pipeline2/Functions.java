@@ -270,16 +270,11 @@ public class Functions {
       List<TS<NumericType>> sources;
       
       int cache_idx = 0;
-      
-      boolean first_run = true;
-      boolean has_next = false;
       long next_ts = Long.MAX_VALUE;
-      MutableNumericType dp;
       
       public GBIterator(TimeSeriesId id) {
         this.id = id;
         sources = Lists.newArrayList();
-        dp = new MutableNumericType(id);
       }
       
       @Override
@@ -292,11 +287,11 @@ public class Functions {
         int[] idxs = new int[sources.size()];
         List<TimeSeriesValue<NumericType>> output = Lists.newArrayList();
         long last_ts = -1;
-        long sum = 0;
+        
         boolean initial = true;
         while(true) {
           long next_ts = Long.MAX_VALUE;
-          
+          long sum = 0;
           boolean has_next = false;
           for (int i = 0; i < sources.size(); i++) {
             if (idxs[i] >= sources.get(i).data().size()) {

@@ -100,8 +100,10 @@ public class TimeSortedDataStore {
         long local_ts = ts;
         if (reverse_chunks) {
           for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
+//            numeric_data.add(new MutableNumericType(dummy_id,
+//                new MillisecondTimeStamp(local_ts), i + 1 * x));
             numeric_data.add(new MutableNumericType(dummy_id,
-                new MillisecondTimeStamp(local_ts), i + 1 * x));
+                new MillisecondTimeStamp(local_ts), 1));
             strings.add(new MutableStringType(dummy_id, new MillisecondTimeStamp(local_ts), 
                 Lists.newArrayList(i % 2 == 0 ? "foo" : "bar")));
             local_ts -= INTERVAL;
@@ -110,9 +112,10 @@ public class TimeSortedDataStore {
           Collections.reverse(strings);
         } else {
           for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
-            MutableNumericType t = new MutableNumericType(dummy_id,
-                new MillisecondTimeStamp(local_ts), i + 1 * x);
-            numeric_data.add(t);
+//          numeric_data.add(new MutableNumericType(dummy_id,
+//          new MillisecondTimeStamp(local_ts), i + 1 * x));
+            numeric_data.add(new MutableNumericType(dummy_id,
+                new MillisecondTimeStamp(local_ts), 1));
             strings.add(new MutableStringType(dummy_id, new MillisecondTimeStamp(local_ts), 
                 Lists.newArrayList(i % 2 == 0 ? "foo" : "bar")));
             local_ts += INTERVAL;
