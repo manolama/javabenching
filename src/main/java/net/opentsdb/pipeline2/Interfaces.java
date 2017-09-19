@@ -1,16 +1,15 @@
-package net.opentsdb.pipeline;
+package net.opentsdb.pipeline2;
 
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.List;
 
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
-
 public class Interfaces {
-  private Interfaces() { }
+private Interfaces() { }
   
   public enum QueryMode {
     SINGLE,             /** All in one. Tight limits. */ 
@@ -21,8 +20,6 @@ public class Interfaces {
   
   public interface QResult {
     public Collection<TS<?>> series();
-    public Throwable exception();
-    public boolean hasException();
   }
   
   public interface StreamListener {
@@ -31,17 +28,16 @@ public class Interfaces {
     public void onError(Throwable t);
   }
   
-  /** Time series interface */
   public interface TS<T extends TimeSeriesDataType> {
     public TimeSeriesId id();
-    public Iterator<TimeSeriesValue<T>> iterator();
+    public List<TimeSeriesValue<T>> data();
     public TypeToken<T> type();
   }
   
   public interface TSProcessor {
     
   }
-
+  
   public interface QExecutionPipeline {
     public void setListener(StreamListener listener);
     public StreamListener getListener();

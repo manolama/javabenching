@@ -1,7 +1,5 @@
-package net.opentsdb.pipeline;
+package net.opentsdb.pipeline2;
 
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.reflect.TypeToken;
@@ -11,88 +9,37 @@ import net.opentsdb.data.MillisecondTimeStamp;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.TimeStamp;
-import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
-import net.opentsdb.pipeline.Abstracts.*;
-import net.opentsdb.pipeline.Interfaces.*;
-import net.opentsdb.utils.Bytes;
-import net.opentsdb.utils.Pair;
+import net.opentsdb.pipeline2.Abstracts.*;
 
 public class Implementations {
 
-  public static class ArrayBackedLongTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
-    
-    TimeStamp ts = new MillisecondTimeStamp(0);
-    MutableNumericType dp;
-    
-    public ArrayBackedLongTS(final TimeSeriesId id) {
+  public static class LocalNumericTS extends MyTS<NumericType> {
+
+    public LocalNumericTS(TimeSeriesId id) {
       super(id);
-      dp = new MutableNumericType(id);
-    }
-    
-    @Override
-    public Iterator<TimeSeriesValue<NumericType>> iterator() {
-      return this;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return idx < dps.length;
-    }
-
-    @Override
-    public TimeSeriesValue<NumericType> next() {
-      ts.updateMsEpoch(Bytes.getLong(dps, idx));
-      idx += 8;
-      dp.reset(ts, Bytes.getLong(dps, idx), 1);
-      idx += 8;
-      return dp;
     }
 
     @Override
     public TypeToken<NumericType> type() {
       return NumericType.TYPE;
     }
+    
   }
   
-  public static class ListBackedStringTS extends MyTS<StringType> implements Iterator<TimeSeriesValue<StringType>> {
-    TimeStamp ts = new MillisecondTimeStamp(0);
-    List<Pair<Long, String>> strings;
-    MutableStringType dp;
-    
+  public static class ListBackedStringTS extends MyTS<StringType> {
+
     public ListBackedStringTS(TimeSeriesId id) {
       super(id);
-      dp = new MutableStringType(id);
-    }
-
-    @Override
-    public Iterator<TimeSeriesValue<StringType>> iterator() {
-      return this;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return idx < strings.size();
-    }
-
-    @Override
-    public TimeSeriesValue<StringType> next() {
-      Pair<Long, String> pair = strings.get(idx++);
-      dp.reset(new MillisecondTimeStamp(pair.getKey()), Lists.newArrayList(pair.getValue()), 1);
-      return dp;
-    }
-    
-    public void setStrings(final List<Pair<Long, String>> strings) {
-      this.strings = strings;
-      idx = 0;
     }
 
     @Override
     public TypeToken<StringType> type() {
       return StringType.TYPE;
     }
+    
   }
-  
+
   public static class MutableStringType extends StringType implements TimeSeriesValue<StringType> {
     /** A reference to the ID of the series this data point belongs to. */
     private final TimeSeriesId id;
@@ -108,6 +55,13 @@ public class Implementations {
     public MutableStringType(TimeSeriesId id) {
       this.id = id;
       timestamp = new MillisecondTimeStamp(0);
+    }
+    
+    public MutableStringType(TimeSeriesId id, TimeStamp ts, List<String> values) {
+      this.id = id;
+      this.timestamp = ts;
+      this.values = values;
+      reals = 1;
     }
     
     public void reset(TimeStamp ts, List<String> values, int reals) {

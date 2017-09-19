@@ -2,12 +2,21 @@ package net.opentsdb.pipeline;
 
 import java.util.Iterator;
 
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jol.info.ClassLayout;
+import org.openjdk.jol.vm.VM;
+
 import com.stumbleupon.async.Deferred;
 
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Abstracts.StringType;
 import net.opentsdb.pipeline.Functions.*;
+import net.opentsdb.pipeline.Implementations.*;
 import net.opentsdb.pipeline.Interfaces.*;
 
 /**
@@ -26,8 +35,9 @@ import net.opentsdb.pipeline.Interfaces.*;
  *   threads and host resources efficiently.
  * - Multi-type result pipelines for dealing with regular old numeric data, histograms,
  *   annotations, status', etc.
- * - Cachable multi-pass processors (we don't want to go all the way back to storage
- *   if we can help it).
+ * - Cachable multi-pass processors. We don't want to go all the way back to storage
+ *   if we can help it. And we want to maintain ONLY the raw data in memory if we 
+ *   can at all help it.
  *
  *  NOTE: This is all scratch code and needs a TON of cleanup, error handling, etc.
  *  
@@ -44,10 +54,14 @@ import net.opentsdb.pipeline.Interfaces.*;
  *     potentially need space for 72,000 dps vs 14,4000 + 500 (a buffer per op per timeseris). 
  *  
  */
+@State(Scope.Thread)
+@BenchmarkMode(Mode.AverageTime)
 public class Main {
   
   public static void main(final String[] args) {
     version1();
+    //version1Sizes();
+    //net.opentsdb.pipeline2.Main.version2();
   }
   
   /**
@@ -55,6 +69,7 @@ public class Main {
    * provide an asynchronous listener. To initiate the stream, the caller just
    * calls {@link QExecutionPipeline#fetchNext()}.
    */
+  @Benchmark
   public static void version1() {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     
@@ -152,7 +167,23 @@ public class Main {
       e.printStackTrace();
     }
     
+    //System.out.println(ClassLayout.parseInstance(exec).toPrintable());
+    
     store.pool.shutdownNow();
+  }
+
+  public static void version1Sizes() {
+    System.out.println(VM.current().details());
+    
+    System.out.println(ClassLayout.parseClass(QExecutionPipeline.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(TS.class).toPrintable());
+    
+    System.out.println(ClassLayout.parseClass(FilterNumsByString.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(GroupBy.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(DiffFromStdD.class).toPrintable());
+    
+    System.out.println(ClassLayout.parseClass(ArrayBackedLongTS.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(MutableStringType.class).toPrintable());
   }
   
 }

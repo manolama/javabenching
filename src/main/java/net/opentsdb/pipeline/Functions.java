@@ -222,7 +222,6 @@ public class Functions {
     Set<Integer> hashes = Sets.newHashSet();
     GroupBy parent;
     boolean cache = false;
-    
     List<Map<TimeSeriesId, byte[]>> local_cache = Lists.newArrayList();
     int cache_idx = 0;
     
@@ -672,6 +671,9 @@ public class Functions {
     }
   }
   
+  /**
+   * A simple, naive expression processor that just sums up the time series.
+   */
   public static class ExpressionProc implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
