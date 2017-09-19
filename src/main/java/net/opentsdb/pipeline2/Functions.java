@@ -1,5 +1,6 @@
 package net.opentsdb.pipeline2;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.TimeSortedDataStore;
 import net.opentsdb.pipeline2.Abstracts.StringType;
 import net.opentsdb.pipeline2.Implementations.*;
 import net.opentsdb.pipeline2.Interfaces.*;
@@ -151,7 +153,7 @@ public class Functions {
     Set<Integer> hashes = Sets.newHashSet();
     GroupBy parent;
     boolean cache = false;
-    List<Map<TimeSeriesId, List<TimeSeriesValue<?>>>> local_cache = Lists.newArrayList();
+    List<Map<TimeSeriesId, byte[]>> local_cache = Lists.newArrayList();
     int cache_idx = 0;
     
     protected GroupBy() { }
@@ -182,14 +184,14 @@ public class Functions {
         
         // work from cache.
         // TODO - fall through in case the cache has been exhausted. That'll get ugly.
-        Map<TimeSeriesId, List<TimeSeriesValue<? extends TimeSeriesDataType>>> chunk = local_cache.get(cache_idx++);
-        for (Entry<TimeSeriesId, List<TimeSeriesValue<? extends TimeSeriesDataType>>> entry : chunk.entrySet()) {
+        Map<TimeSeriesId, byte[]> chunk = local_cache.get(cache_idx++);
+        for (Entry<TimeSeriesId, byte[]> entry : chunk.entrySet()) {
           LocalNumericTS extant = (LocalNumericTS) time_series.get(entry.getKey());
           if (extant == null) {
             extant = new LocalNumericTS(entry.getKey());
             time_series.put(entry.getKey(), extant);
           }
-          extant.addData(entry.getValue());
+          extant.nextChunk(entry.getValue());
         }
         System.out.println("FED FROM CACHE!");
         upstream.onNext(this);
@@ -268,7 +270,7 @@ public class Functions {
     class GBIterator implements TS<NumericType> {
       TimeSeriesId id;
       List<TS<NumericType>> sources;
-      
+      byte[] data = cache ? new byte[TimeSortedDataStore.INTERVALS_PER_CHUNK * 16] : null;
       int cache_idx = 0;
       long next_ts = Long.MAX_VALUE;
       
@@ -324,19 +326,22 @@ public class Functions {
             initial = false;
           } else {
             output.add(new MutableNumericType(id, new MillisecondTimeStamp(last_ts), sum, 1));
+            if (cache) {
+              System.arraycopy(Bytes.fromLong(last_ts), 0, data, cache_idx, 8);
+              cache_idx += 8;
+              System.arraycopy(Bytes.fromLong(sum), 0, data, cache_idx, 8);
+              cache_idx += 8;
+            }
           }
           last_ts = next_ts;
           
           if (!has_next) {
+            if (cache) {
+              Map<TimeSeriesId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
+              c.put(id, Arrays.copyOf(data, cache_idx));
+            }
             break;
           }
-        }
-        
-        if (cache) {
-          Map<TimeSeriesId, List<TimeSeriesValue<?>>> c = parent.local_cache.get(parent.local_cache.size() - 1);
-          // WTF casting!?!
-          List<TimeSeriesValue<?>> o = Lists.newArrayList(output);
-          c.put(id, o);
         }
         
         return output;

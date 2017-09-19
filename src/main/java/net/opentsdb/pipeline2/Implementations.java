@@ -5,12 +5,15 @@ import java.util.List;
 import com.google.common.reflect.TypeToken;
 
 import avro.shaded.com.google.common.collect.Lists;
+import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.TimeStamp;
+import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline2.Abstracts.*;
+import net.opentsdb.utils.Bytes;
 
 public class Implementations {
 
@@ -24,18 +27,46 @@ public class Implementations {
     public TypeToken<NumericType> type() {
       return NumericType.TYPE;
     }
+
+    @Override
+    public List<TimeSeriesValue<NumericType>> data() {
+      List<TimeSeriesValue<NumericType>> results = Lists.newArrayList();
+      int idx = 0;
+      while (idx < dps.length) {
+        TimeStamp ts = new MillisecondTimeStamp(Bytes.getLong(dps, idx));
+        idx += 8;
+        results.add(new MutableNumericType(id, ts, Bytes.getLong(dps, idx), 1));
+        idx += 8;
+      }
+      return results;
+    }
     
   }
   
-  public static class ListBackedStringTS extends MyTS<StringType> {
+  public static class ArrayBackedStringTS extends MyTS<StringType> {
 
-    public ListBackedStringTS(TimeSeriesId id) {
+    public ArrayBackedStringTS(TimeSeriesId id) {
       super(id);
     }
 
     @Override
     public TypeToken<StringType> type() {
       return StringType.TYPE;
+    }
+
+    @Override
+    public List<TimeSeriesValue<StringType>> data() {
+      List<TimeSeriesValue<StringType>> results = Lists.newArrayList();
+      int idx = 0;
+      while(idx < dps.length) {
+        TimeStamp ts = new MillisecondTimeStamp(Bytes.getLong(dps, idx));
+        idx += 8;
+        byte[] s = new byte[3];
+        System.arraycopy(dps, idx, s, 0, 3);
+        idx += 3;
+        results.add(new MutableStringType(id, ts, Lists.newArrayList(new String(s, Const.UTF8_CHARSET))));
+      }
+      return results;
     }
     
   }

@@ -7,6 +7,7 @@ import java.util.List;
 import com.google.common.reflect.TypeToken;
 
 import avro.shaded.com.google.common.collect.Lists;
+import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
@@ -21,7 +22,6 @@ import net.opentsdb.utils.Pair;
 public class Implementations {
 
   public static class ArrayBackedLongTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
-    
     TimeStamp ts = new MillisecondTimeStamp(0);
     MutableNumericType dp;
     
@@ -55,12 +55,11 @@ public class Implementations {
     }
   }
   
-  public static class ListBackedStringTS extends MyTS<StringType> implements Iterator<TimeSeriesValue<StringType>> {
+  public static class ArrayBackedStringTS extends MyTS<StringType> implements Iterator<TimeSeriesValue<StringType>> {
     TimeStamp ts = new MillisecondTimeStamp(0);
-    List<Pair<Long, String>> strings;
     MutableStringType dp;
     
-    public ListBackedStringTS(TimeSeriesId id) {
+    public ArrayBackedStringTS(TimeSeriesId id) {
       super(id);
       dp = new MutableStringType(id);
     }
@@ -72,21 +71,20 @@ public class Implementations {
 
     @Override
     public boolean hasNext() {
-      return idx < strings.size();
+      return idx < dps.length;
     }
 
     @Override
     public TimeSeriesValue<StringType> next() {
-      Pair<Long, String> pair = strings.get(idx++);
-      dp.reset(new MillisecondTimeStamp(pair.getKey()), Lists.newArrayList(pair.getValue()), 1);
+      ts.updateMsEpoch(Bytes.getLong(dps, idx));
+      idx += 8;
+      byte[] s = new byte[3];
+      System.arraycopy(dps, idx, s, 0, 3);
+      idx += 3;
+      dp.reset(ts, Lists.newArrayList(new String(s, Const.UTF8_CHARSET)), 1);
       return dp;
     }
     
-    public void setStrings(final List<Pair<Long, String>> strings) {
-      this.strings = strings;
-      idx = 0;
-    }
-
     @Override
     public TypeToken<StringType> type() {
       return StringType.TYPE;

@@ -1,69 +1,27 @@
 package net.opentsdb.pipeline;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 import com.google.common.collect.Lists;
-import com.stumbleupon.async.Deferred;
 
 import avro.shaded.com.google.common.collect.Maps;
-import net.opentsdb.common.Const;
-import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.SimpleStringTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
-import net.opentsdb.data.TimeSeriesValue;
-import net.opentsdb.data.TimeStamp;
-import net.opentsdb.data.types.annotation.AnnotationType;
-import net.opentsdb.data.types.numeric.MutableNumericType;
-import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Abstracts.*;
-import net.opentsdb.pipeline.Functions.*;
 import net.opentsdb.pipeline.Implementations.*;
 import net.opentsdb.pipeline.Interfaces.*;
-import net.opentsdb.utils.Bytes;
-import net.opentsdb.utils.Pair;
 
 /**
- * And example data source. It just
+ * And example data source. 
  */
-public class TimeSortedDataStore {
-  public static final long HOSTS = 4;
-  public static final long INTERVAL = 1000;
-  public static final long INTERVALS = 8;
-  public static final int INTERVALS_PER_CHUNK = 4;
-  public static final List<String> DATACENTERS = Lists.newArrayList(
-      "PHX", "LGA", "LAX", "DEN");
-  public static final List<String> METRICS = Lists.newArrayList(
-      "sys.cpu.user", "sys.if.out", "sys.if.in", "web.requests");
+public class TimeSortedDataStore extends BaseTimeSortedDataStore {
 
-  ExecutorService pool = Executors.newFixedThreadPool(1);
-  List<TimeSeriesId> timeseries;
-  long start_ts = 0; // in ms
-  boolean with_strings;
-  
   public TimeSortedDataStore(boolean with_strings) {
-    this.with_strings = with_strings;
-    timeseries = Lists.newArrayList();
-    
-    for (final String metric : METRICS) {
-      for (final String dc : DATACENTERS) {
-        for (int h = 0; h < HOSTS; h++) {
-          TimeSeriesId id = SimpleStringTimeSeriesId.newBuilder()
-              .addMetric(metric)
-              .addTags("dc", dc)
-              .addTags("host", String.format("web%02d", h + 1))
-              .build();
-          timeseries.add(id);
-        }
-      }
-    }
+    super(with_strings);
   }
   
   class MyExecution implements QExecutionPipeline, Supplier<Void> {
@@ -90,55 +48,28 @@ public class TimeSortedDataStore {
         return;
       }
       
-      for (int x = 0; x < timeseries.size(); x++) {
-        if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
-            Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
-          continue;
-        }
-        List<Pair<Long, String>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
-        // for now add em all
-        byte[] payload = new byte[INTERVALS_PER_CHUNK * 16];
-        int idx = reverse_chunks ? payload.length - 8 : 0;
-        long local_ts = ts;
-        if (reverse_chunks) {
-          for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
-            //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
-            System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
-            idx -= 8;
-            System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
-            idx -= 8;
-            strings.add(new Pair<Long, String>(local_ts, i % 2 == 0 ? "foo" : "bar"));
-            local_ts -= INTERVAL;
-          }
-          Collections.reverse(strings);
-        } else {
-          for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
-            System.arraycopy(Bytes.fromLong(local_ts), 0, payload, idx, 8);
-            idx += 8;
-            //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
-            System.arraycopy(Bytes.fromLong(1), 0, payload, idx, 8);
-            idx += 8;
-            strings.add(new Pair<Long, String>(local_ts, i % 2 == 0 ? "foo" : "bar"));
-            local_ts += INTERVAL;
-          }
-        }
-        
-        TS<?> t = num_map.get(timeseries.get(x));
+      Map<TimeSeriesId, byte[]> nums = getChunk(DataType.NUMBERS, ts, reverse_chunks);
+      for (Entry<TimeSeriesId, byte[]> entry : nums.entrySet()) {
+        TS<?> t = num_map.get(entry.getKey());
         if (t == null) {
-          t = new ArrayBackedLongTS(timeseries.get(x));
-          num_map.put(timeseries.get(x), t);
+          t = new ArrayBackedLongTS(entry.getKey());
+          num_map.put(entry.getKey(), t);
         }
-        ((MyTS<?>) t).nextChunk(payload);
-          
-        if (with_strings) {
-          t = string_map.get(timeseries.get(x));
+        ((MyTS<?>) t).nextChunk(entry.getValue());
+      }
+      
+      if (with_strings) {
+        Map<TimeSeriesId, byte[]> strings = getChunk(DataType.STRINGS, ts, reverse_chunks);
+        for (Entry<TimeSeriesId, byte[]> entry : strings.entrySet()) {
+          TS<?> t = string_map.get(entry.getKey());
           if (t == null) {
-            t = new ListBackedStringTS(timeseries.get(x));
-            string_map.put(timeseries.get(x), t);
+            t = new ArrayBackedStringTS(entry.getKey());
+            string_map.put(entry.getKey(), t);
           }
-          ((ListBackedStringTS) t).setStrings(strings);
+          ((MyTS<?>) t).nextChunk(entry.getValue());
         }
       }
+      
       if (reverse_chunks) {
         ts -= INTERVALS_PER_CHUNK * INTERVAL;
       } else {

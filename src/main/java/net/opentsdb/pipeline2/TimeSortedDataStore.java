@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +20,7 @@ import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
 import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.BaseTimeSortedDataStore;
 import net.opentsdb.pipeline2.Abstracts.*;
 import net.opentsdb.pipeline2.Implementations.*;
 import net.opentsdb.pipeline2.Interfaces.*;
@@ -27,42 +29,10 @@ import net.opentsdb.utils.Bytes;
 /**
  * And example data source. It just
  */
-public class TimeSortedDataStore {
-  public static final long HOSTS = 4;
-  public static final long INTERVAL = 1000;
-  public static final long INTERVALS = 8;
-  public static final int INTERVALS_PER_CHUNK = 4;
-  public static final List<String> DATACENTERS = Lists.newArrayList(
-      "PHX", "LGA", "LAX", "DEN");
-  public static final List<String> METRICS = Lists.newArrayList(
-      "sys.cpu.user", "sys.if.out", "sys.if.in", "web.requests");
-
-  ExecutorService pool = Executors.newFixedThreadPool(1);
-  List<TimeSeriesId> timeseries;
-  long start_ts = 0; // in ms
-  boolean with_strings;
-  
-  TimeSeriesId dummy_id;
+public class TimeSortedDataStore extends BaseTimeSortedDataStore {
   
   public TimeSortedDataStore(boolean with_strings) {
-    this.with_strings = with_strings;
-    timeseries = Lists.newArrayList();
-    dummy_id = SimpleStringTimeSeriesId.newBuilder()
-        .setAlias("blah")
-        .build();
-    
-    for (final String metric : METRICS) {
-      for (final String dc : DATACENTERS) {
-        for (int h = 0; h < HOSTS; h++) {
-          TimeSeriesId id = SimpleStringTimeSeriesId.newBuilder()
-              .addMetric(metric)
-              .addTags("dc", dc)
-              .addTags("host", String.format("web%02d", h + 1))
-              .build();
-          timeseries.add(id);
-        }
-      }
-    }
+    super(with_strings);
   }
   
   class MyExecution implements QExecutionPipeline, Supplier<Void> {
@@ -89,55 +59,78 @@ public class TimeSortedDataStore {
         return;
       }
       
-      for (int x = 0; x < timeseries.size(); x++) {
-        if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
-            Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
-          continue;
-        }
-        List<TimeSeriesValue<?>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
-        List<TimeSeriesValue<?>> numeric_data = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
-        // for now add em all
-        long local_ts = ts;
-        if (reverse_chunks) {
-          for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
+//      for (int x = 0; x < timeseries.size(); x++) {
+//        if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
+//            Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+//          continue;
+//        }
+//        List<TimeSeriesValue<?>> strings = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
+//        List<TimeSeriesValue<?>> numeric_data = Lists.newArrayListWithCapacity(INTERVALS_PER_CHUNK);
+//        // for now add em all
+//        long local_ts = ts;
+//        if (reverse_chunks) {
+//          for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
+////            numeric_data.add(new MutableNumericType(dummy_id,
+////                new MillisecondTimeStamp(local_ts), i + 1 * x));
 //            numeric_data.add(new MutableNumericType(dummy_id,
-//                new MillisecondTimeStamp(local_ts), i + 1 * x));
-            numeric_data.add(new MutableNumericType(dummy_id,
-                new MillisecondTimeStamp(local_ts), 1));
-            strings.add(new MutableStringType(dummy_id, new MillisecondTimeStamp(local_ts), 
-                Lists.newArrayList(i % 2 == 0 ? "foo" : "bar")));
-            local_ts -= INTERVAL;
-          }
-          Collections.reverse(numeric_data);
-          Collections.reverse(strings);
-        } else {
-          for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
-//          numeric_data.add(new MutableNumericType(dummy_id,
-//          new MillisecondTimeStamp(local_ts), i + 1 * x));
-            numeric_data.add(new MutableNumericType(dummy_id,
-                new MillisecondTimeStamp(local_ts), 1));
-            strings.add(new MutableStringType(dummy_id, new MillisecondTimeStamp(local_ts), 
-                Lists.newArrayList(i % 2 == 0 ? "foo" : "bar")));
-            local_ts += INTERVAL;
-          }
-        }
-        
-        TS<?> t = num_map.get(timeseries.get(x));
+//                new MillisecondTimeStamp(local_ts), 1));
+//            strings.add(new MutableStringType(dummy_id, new MillisecondTimeStamp(local_ts), 
+//                Lists.newArrayList(i % 2 == 0 ? "foo" : "bar")));
+//            local_ts -= INTERVAL;
+//          }
+//          Collections.reverse(numeric_data);
+//          Collections.reverse(strings);
+//        } else {
+//          for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
+////          numeric_data.add(new MutableNumericType(dummy_id,
+////          new MillisecondTimeStamp(local_ts), i + 1 * x));
+//            numeric_data.add(new MutableNumericType(dummy_id,
+//                new MillisecondTimeStamp(local_ts), 1));
+//            strings.add(new MutableStringType(dummy_id, new MillisecondTimeStamp(local_ts), 
+//                Lists.newArrayList(i % 2 == 0 ? "foo" : "bar")));
+//            local_ts += INTERVAL;
+//          }
+//        }
+//        
+//        TS<?> t = num_map.get(timeseries.get(x));
+//        if (t == null) {
+//          t = new LocalNumericTS(timeseries.get(x));
+//          num_map.put(timeseries.get(x), t);
+//        }
+//        ((LocalNumericTS) t).addData(numeric_data);
+//          
+//        if (with_strings) {
+//          t = string_map.get(timeseries.get(x));
+//          if (t == null) {
+//            t = new ListBackedStringTS(timeseries.get(x));
+//            string_map.put(timeseries.get(x), t);
+//          }
+//          ((ListBackedStringTS) t).addData(strings);
+//        }
+//      }
+      
+      Map<TimeSeriesId, byte[]> nums = getChunk(DataType.NUMBERS, ts, reverse_chunks);
+      for (Entry<TimeSeriesId, byte[]> entry : nums.entrySet()) {
+        TS<?> t = num_map.get(entry.getKey());
         if (t == null) {
-          t = new LocalNumericTS(timeseries.get(x));
-          num_map.put(timeseries.get(x), t);
+          t = new LocalNumericTS(entry.getKey());
+          num_map.put(entry.getKey(), t);
         }
-        ((LocalNumericTS) t).addData(numeric_data);
-          
-        if (with_strings) {
-          t = string_map.get(timeseries.get(x));
+        ((MyTS<?>) t).nextChunk(entry.getValue());
+      }
+      
+      if (with_strings) {
+        Map<TimeSeriesId, byte[]> strings = getChunk(DataType.STRINGS, ts, reverse_chunks);
+        for (Entry<TimeSeriesId, byte[]> entry : strings.entrySet()) {
+          TS<?> t = string_map.get(entry.getKey());
           if (t == null) {
-            t = new ListBackedStringTS(timeseries.get(x));
-            string_map.put(timeseries.get(x), t);
+            t = new ArrayBackedStringTS(entry.getKey());
+            string_map.put(entry.getKey(), t);
           }
-          ((ListBackedStringTS) t).addData(strings);
+          ((MyTS<?>) t).nextChunk(entry.getValue());
         }
       }
+      
       if (reverse_chunks) {
         ts -= INTERVALS_PER_CHUNK * INTERVAL;
       } else {

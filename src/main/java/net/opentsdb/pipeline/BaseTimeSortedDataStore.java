@@ -1,0 +1,147 @@
+package net.opentsdb.pipeline;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import com.google.common.collect.Lists;
+
+import avro.shaded.com.google.common.collect.Maps;
+import net.opentsdb.common.Const;
+import net.opentsdb.data.SimpleStringTimeSeriesId;
+import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.utils.Bytes;
+
+/**
+ * And example data source. It just
+ */
+public abstract class BaseTimeSortedDataStore {
+  public static final long HOSTS = 4;
+  public static final long INTERVAL = 1000;
+  public static final long INTERVALS = 8;
+  public static final int INTERVALS_PER_CHUNK = 4;
+  public static final List<String> DATACENTERS = Lists.newArrayList(
+      "PHX", "LGA", "LAX", "DEN");
+  public static final List<String> METRICS = Lists.newArrayList(
+      "sys.cpu.user", "sys.if.out", "sys.if.in", "web.requests");
+
+  public enum DataType {
+    NUMBERS,
+    STRINGS
+  }
+  
+  public ExecutorService pool = Executors.newFixedThreadPool(1);
+  public List<TimeSeriesId> timeseries;
+  public long start_ts = 0; // in ms
+  public boolean with_strings;
+  
+  public BaseTimeSortedDataStore(boolean with_strings) {
+    this.with_strings = with_strings;
+    timeseries = Lists.newArrayList();
+    
+    for (final String metric : METRICS) {
+      for (final String dc : DATACENTERS) {
+        for (int h = 0; h < HOSTS; h++) {
+          TimeSeriesId id = SimpleStringTimeSeriesId.newBuilder()
+              .addMetric(metric)
+              .addTags("dc", dc)
+              .addTags("host", String.format("web%02d", h + 1))
+              .build();
+          timeseries.add(id);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Generates an "encoded" chunk of data as if we fetched a compressed set of
+   * info from storage.
+   * @param type The type of data to return.
+   * @param ts The timestamp to start from.
+   * @param reverse Whether or not we're walking down or up.
+   * @return An "encoded" byte array.
+   */
+  public Map<TimeSeriesId, byte[]> getChunk(DataType type, long ts, boolean reverse) {
+    switch (type) {
+    case NUMBERS:
+      return getNumbersChunk(ts, reverse);
+    case STRINGS:
+      return getStringsChunk(ts, reverse);
+      default:
+        throw new RuntimeException("WTF?");
+    }
+  }
+  
+  Map<TimeSeriesId, byte[]> getNumbersChunk(long ts, boolean reverse) {
+    Map<TimeSeriesId, byte[]> results = Maps.newHashMap();
+    for (int x = 0; x < timeseries.size(); x++) {
+      if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
+          Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+        continue;
+      }
+      
+      byte[] data = new byte[INTERVALS_PER_CHUNK * 16];
+      long local_ts = ts;
+      int idx = reverse ? data.length - 8 : 0;
+      
+      if (reverse) {
+        for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
+          //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+          System.arraycopy(Bytes.fromLong(1), 0, data, idx, 8);
+          idx -= 8;
+          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
+          idx -= 8;
+          local_ts -= INTERVAL;
+        }
+      } else {
+        for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
+          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
+          idx += 8;
+          //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
+          System.arraycopy(Bytes.fromLong(1), 0, data, idx, 8);
+          idx += 8;
+          local_ts += INTERVAL;
+        }
+      }
+      results.put(timeseries.get(x), data);
+    }
+    return results;
+  }
+  
+  Map<TimeSeriesId, byte[]> getStringsChunk(long ts, boolean reverse) {
+    Map<TimeSeriesId, byte[]> results = Maps.newHashMap();
+    for (int x = 0; x < timeseries.size(); x++) {
+      if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
+          Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+        continue;
+      }
+      
+      byte[] data = new byte[INTERVALS_PER_CHUNK * (8 + 3)];
+      long local_ts = ts;
+      int idx = reverse ? data.length - 3 : 0;
+      
+      if (reverse) {
+        for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
+          System.arraycopy(i % 2 == 0 ? "foo".getBytes(Const.UTF8_CHARSET) : "bar".getBytes(Const.UTF8_CHARSET), 
+              0, data, idx, 3);
+          idx -= 8;
+          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
+          idx -= 3;
+          local_ts -= INTERVAL;
+        }
+      } else {
+        for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
+          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
+          idx += 8;
+          System.arraycopy(i % 2 == 0 ? "foo".getBytes(Const.UTF8_CHARSET) : "bar".getBytes(Const.UTF8_CHARSET), 
+              0, data, idx, 3);
+          idx += 3;
+          local_ts += INTERVAL;
+        }
+      }
+      results.put(timeseries.get(x), data);
+    }
+    return results;
+  }
+}

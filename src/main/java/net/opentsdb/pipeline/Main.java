@@ -12,6 +12,7 @@ import org.openjdk.jol.vm.VM;
 
 import com.stumbleupon.async.Deferred;
 
+import net.opentsdb.common.Const;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Abstracts.StringType;
@@ -76,7 +77,7 @@ public class Main {
     /** This section would be hidden behind the query engine. Users just 
      * submit the query and the call graph is setup, yada yada. */
     TimeSortedDataStore store = new TimeSortedDataStore(true);
-    QExecutionPipeline exec = store.new MyExecution(false, mode);
+    QExecutionPipeline exec = store.new MyExecution(true, mode);
     exec = (QExecutionPipeline) new FilterNumsByString(exec);
     exec = (QExecutionPipeline) new GroupBy(exec);
     exec = (QExecutionPipeline) new DiffFromStdD(exec);
