@@ -5,6 +5,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 
 import com.stumbleupon.async.Deferred;
 
@@ -20,7 +21,7 @@ import net.opentsdb.pipeline2.Interfaces.*;
 public class Main {
 
   @Benchmark
-  public static void listsOfComplexTypes() {
+  public static void listsOfComplexTypes(Blackhole black_hole) {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     TimeSortedDataStore store = new TimeSortedDataStore(true);
     QExecutionPipeline exec = store.new MyExecution(false, mode);
@@ -48,7 +49,6 @@ public class Main {
        */
       @Override
       public void onComplete() {
-        System.out.println("DONE after " + iterations + " iterations");
         d.callback(null);
       }
 
@@ -65,20 +65,34 @@ public class Main {
           // consumers can iterate over each series and then iterate over the dps 
           // within that series.
           for (TS<?> ts : next.series()) {
-            System.out.println(ts.id());
+            if (black_hole == null) {
+              System.out.println(ts.id());
+            } else {
+              black_hole.consume(ts.id().toString());
+            }
             if (ts.type() == NumericType.TYPE) {
               for (TimeSeriesValue<?> dp : ts.data()) {
                 TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) dp;
-                System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+                if (black_hole == null) {
+                  System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+                } else {
+                  black_hole.consume(v.timestamp().epoch() + " " + v.value().toDouble());
+                }
               }
             } else {
               for (TimeSeriesValue<?> dp : ts.data()) {
                 TimeSeriesValue<StringType> v = (TimeSeriesValue<StringType>) dp;
-                System.out.println("  " + v.timestamp().epoch() + " " + v.value().values());
+                if (black_hole == null) {
+                  System.out.println("  " + v.timestamp().epoch() + " " + v.value().values());
+                } else {
+                  black_hole.consume(v.timestamp().epoch() + " " + v.value().values());
+                }
               }
             }
           }
-          System.out.println("-------------------------");
+          if (black_hole == null) {
+            System.out.println("-------------------------");
+          }
           
           iterations++;
           if (mode == QueryMode.CLIENT_STREAM) {

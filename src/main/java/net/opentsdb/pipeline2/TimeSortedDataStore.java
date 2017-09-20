@@ -53,7 +53,6 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
     
     @Override
     public void fetchNext() {
-      System.out.println(".... fetching from store");
       if (reverse_chunks ? ts <= start_ts : ts >= start_ts + (INTERVALS * INTERVAL)) {
         listener.onComplete();
         return;

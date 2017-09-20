@@ -193,7 +193,6 @@ public class Functions {
           }
           extant.nextChunk(entry.getValue());
         }
-        System.out.println("FED FROM CACHE!");
         upstream.onNext(this);
       } else {
         downstream.fetchNext();
@@ -239,7 +238,6 @@ public class Functions {
       }
       
       time_series.clear();
-      //System.out.println("Received next...");
       for (TS<?> ts : next.series()) {
         if (ts.type() != NumericType.TYPE) {
           continue;
@@ -468,13 +466,10 @@ public class Functions {
       
       @Override
       public void onComplete() {
-        System.out.println("COMPLETE with the first pass!");
-        
         // setup the new iterators
         for (Entry<TimeSeriesId, Pair<Long, Double>> series : sums.entrySet()) {
           SIt it = new SIt();
           it.stdev = Math.sqrt((series.getValue().getValue() / (double)series.getValue().getKey()));
-          System.out.println("STD: " + it.stdev);
           // PURPOSELY not setting the source here.
           time_series.put(series.getKey(), it);
         }

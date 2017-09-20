@@ -5,6 +5,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 
 import com.stumbleupon.async.Deferred;
 
@@ -18,7 +19,7 @@ import net.opentsdb.pipeline3.Abstracts.*;
 public class Main {
 
   @Benchmark
-  public static void arraysOfPrimitives() {
+  public static void arraysOfPrimitives(Blackhole black_hole) {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     TimeSortedDataStore store = new TimeSortedDataStore(true);
     QExecutionPipeline exec = store.new MyExecution(true, mode);
@@ -46,7 +47,6 @@ public class Main {
        */
       @Override
       public void onComplete() {
-        System.out.println("DONE after " + iterations + " iterations");
         d.callback(null);
       }
 
@@ -63,21 +63,36 @@ public class Main {
           // consumers can iterate over each series and then iterate over the dps 
           // within that series.
           for (TS<?> ts : next.series()) {
-            System.out.println(ts.id());
+            if (black_hole == null) {
+              System.out.println(ts.id());
+            } else {
+              black_hole.consume(ts.id().toString());
+            }
             if (ts.type() == NumericType.TYPE) {
               NumericTSDataType data = (NumericTSDataType) ts;
               for (int i = 0; i < data.timestamps().length; i++) {
-                System.out.println("  " + (data.timestamps()[i] / 1000) + " " + 
-                    (data.isIntegers() ? data.integers()[i] : data.doubles()[i]));
+                if (black_hole == null) {
+                  System.out.println("  " + (data.timestamps()[i] / 1000) + " " + 
+                      (data.isIntegers() ? data.integers()[i] : data.doubles()[i]));
+                } else {
+                  black_hole.consume("  " + (data.timestamps()[i] / 1000) + " " + 
+                      (data.isIntegers() ? data.integers()[i] : data.doubles()[i]));
+                }
               }
             } else {
               StringTSDataType data = (StringTSDataType) ts;
               for (int i = 0; i < data.timestamps().length; i++) {
-                System.out.println("  " + (data.timestamps()[i] / 1000) + " " + data.strings()[i]);
+                if (black_hole == null) {
+                  System.out.println("  " + (data.timestamps()[i] / 1000) + " " + data.strings()[i]);
+                } else {
+                  black_hole.consume("  " + (data.timestamps()[i] / 1000) + " " + data.strings()[i]);
+                }
               }
             }
           }
-          System.out.println("-------------------------");
+          if (black_hole == null) {
+            System.out.println("-------------------------");
+          }
           
           iterations++;
           if (mode == QueryMode.CLIENT_STREAM) {

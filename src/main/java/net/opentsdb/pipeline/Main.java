@@ -7,6 +7,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jol.info.ClassLayout;
 import org.openjdk.jol.vm.VM;
 
@@ -60,10 +61,10 @@ import net.opentsdb.pipeline.Interfaces.*;
 public class Main {
   
   public static void main(final String[] args) {
-    //version1();
+    //version1(null);
     //version1Sizes();
-    //net.opentsdb.pipeline2.Main.version2();
-    net.opentsdb.pipeline3.Main.arraysOfPrimitives();
+    //net.opentsdb.pipeline2.Main.version2(null);
+    net.opentsdb.pipeline3.Main.arraysOfPrimitives(null);
   }
   
   /**
@@ -72,7 +73,7 @@ public class Main {
    * calls {@link QExecutionPipeline#fetchNext()}.
    */
   @Benchmark
-  public static void iteratorsWithComplexTypes() {
+  public static void iteratorsWithComplexTypes(Blackhole black_hole) {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     
     /** This section would be hidden behind the query engine. Users just 
@@ -104,7 +105,6 @@ public class Main {
        */
       @Override
       public void onComplete() {
-        System.out.println("DONE after " + iterations + " iterations");
         d.callback(null);
       }
 
@@ -121,21 +121,35 @@ public class Main {
           // consumers can iterate over each series and then iterate over the dps 
           // within that series.
           for (TS<?> ts : next.series()) {
-            System.out.println(ts.id());
+            if (black_hole == null) {
+              System.out.println(ts.id());
+            } else {
+              black_hole.consume(ts.id().toString());
+            }
             Iterator<?> it = ts.iterator();
             if (ts.type() == NumericType.TYPE) {
               while (it.hasNext()) {
                 TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
-                System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+                if (black_hole == null) {
+                  System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
+                } else {
+                  black_hole.consume(v.timestamp().epoch() + " " + v.value().toDouble());
+                }
               }
             } else {
               while (it.hasNext()) {
                 TimeSeriesValue<StringType> v = (TimeSeriesValue<StringType>) it.next();
-                System.out.println("  " + v.timestamp().epoch() + " " + v.value().values());
+                if (black_hole == null) {
+                  System.out.println("  " + v.timestamp().epoch() + " " + v.value().values());
+                } else {
+                  black_hole.consume(v.timestamp().epoch() + " " + v.value().values());
+                }
               }
             }
           }
-          System.out.println("-------------------------");
+          if (black_hole == null) {
+            System.out.println("-------------------------");
+          }
           
           iterations++;
           if (mode == QueryMode.CLIENT_STREAM) {
