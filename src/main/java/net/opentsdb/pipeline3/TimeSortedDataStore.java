@@ -1,36 +1,26 @@
-package net.opentsdb.pipeline2;
+package net.opentsdb.pipeline3;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
-import avro.shaded.com.google.common.collect.Maps;
-import net.opentsdb.common.Const;
-import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.SimpleStringTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
-import net.opentsdb.data.TimeSeriesValue;
-import net.opentsdb.data.types.numeric.MutableNumericType;
-import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.BaseTimeSortedDataStore;
-import net.opentsdb.pipeline2.Abstracts.*;
-import net.opentsdb.pipeline2.Implementations.*;
-import net.opentsdb.pipeline2.Interfaces.*;
-import net.opentsdb.utils.Bytes;
+import net.opentsdb.pipeline3.Interfaces.*;
+import net.opentsdb.pipeline3.Abstracts.*;
+import net.opentsdb.pipeline3.Implementations.*;
 
 /**
- * And example data source. It just
+ * And example data source. 
  */
 public class TimeSortedDataStore extends BaseTimeSortedDataStore {
-  
+
   public TimeSortedDataStore(boolean with_strings) {
     super(with_strings);
   }
@@ -63,10 +53,10 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
       for (Entry<TimeSeriesId, byte[]> entry : nums.entrySet()) {
         TS<?> t = num_map.get(entry.getKey());
         if (t == null) {
-          t = new LocalNumericTS(entry.getKey());
+          t = new MyNumeric(entry.getKey());
           num_map.put(entry.getKey(), t);
         }
-        ((MyTS<?>) t).nextChunk(entry.getValue());
+        ((NumericTSDataType) t).setData(entry.getValue(), INTERVALS_PER_CHUNK, true);
       }
       
       if (with_strings) {
@@ -74,10 +64,10 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
         for (Entry<TimeSeriesId, byte[]> entry : strings.entrySet()) {
           TS<?> t = string_map.get(entry.getKey());
           if (t == null) {
-            t = new ArrayBackedStringTS(entry.getKey());
+            t = new MyString(entry.getKey());
             string_map.put(entry.getKey(), t);
           }
-          ((MyTS<?>) t).nextChunk(entry.getValue());
+          ((MyString) t).setData(entry.getValue(), INTERVALS_PER_CHUNK);
         }
       }
       
@@ -165,7 +155,7 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
       results.addAll(string_map.values());
       return results;
     }
-
+    
   }
   
   

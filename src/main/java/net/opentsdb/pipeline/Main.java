@@ -62,7 +62,8 @@ public class Main {
   public static void main(final String[] args) {
     //version1();
     //version1Sizes();
-    net.opentsdb.pipeline2.Main.version2();
+    //net.opentsdb.pipeline2.Main.version2();
+    net.opentsdb.pipeline3.Main.version3();
   }
   
   /**
