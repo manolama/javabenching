@@ -18,7 +18,7 @@ import net.opentsdb.pipeline3.Abstracts.*;
 public class Main {
 
   @Benchmark
-  public static void version3() {
+  public static void arraysOfPrimitives() {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     TimeSortedDataStore store = new TimeSortedDataStore(true);
     QExecutionPipeline exec = store.new MyExecution(true, mode);

@@ -20,7 +20,7 @@ import net.opentsdb.pipeline2.Interfaces.*;
 public class Main {
 
   @Benchmark
-  public static void version2() {
+  public static void listsOfComplexTypes() {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     TimeSortedDataStore store = new TimeSortedDataStore(true);
     QExecutionPipeline exec = store.new MyExecution(false, mode);

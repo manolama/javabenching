@@ -63,7 +63,7 @@ public class Main {
     //version1();
     //version1Sizes();
     //net.opentsdb.pipeline2.Main.version2();
-    net.opentsdb.pipeline3.Main.version3();
+    net.opentsdb.pipeline3.Main.arraysOfPrimitives();
   }
   
   /**
@@ -72,7 +72,7 @@ public class Main {
    * calls {@link QExecutionPipeline#fetchNext()}.
    */
   @Benchmark
-  public static void version1() {
+  public static void iteratorsWithComplexTypes() {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     
     /** This section would be hidden behind the query engine. Users just 
