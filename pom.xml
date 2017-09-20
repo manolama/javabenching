@@ -8,10 +8,18 @@
     <artifactId>javabenching</artifactId>
     <version>0.1</version>
 
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+
     <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <jmh.version>1.19</jmh.version>
-      <opentsdb.version>3.0.83-SNAPSHOT</opentsdb.version>
+      <opentsdb.common.version>3.0.83-20170902.181040-28</opentsdb.common.version>
+      <opentsdb.core.version>3.0.83-20170902.181047-28</opentsdb.core.version>
       <javac.target>1.8</javac.target>
       <uberjar.name>benchmarks</uberjar.name>
       <protobuf.version>3.0.0-beta-2</protobuf.version>
@@ -263,12 +271,12 @@
       <dependency>
           <groupId>net.opentsdb</groupId>
           <artifactId>opentsdb-common</artifactId>
-          <version>${opentsdb.version}</version>
+          <version>${opentsdb.common.version}</version>
         </dependency>
         <dependency>
           <groupId>net.opentsdb</groupId>
           <artifactId>opentsdb-core</artifactId>
-          <version>${opentsdb.version}</version>
+          <version>${opentsdb.core.version}</version>
         </dependency>
         
                         <dependency>
