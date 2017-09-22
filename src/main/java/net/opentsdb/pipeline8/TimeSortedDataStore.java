@@ -1,5 +1,6 @@
-package net.opentsdb.pipeline7;
+package net.opentsdb.pipeline8;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +14,10 @@ import com.google.common.collect.Lists;
 
 import avro.shaded.com.google.common.collect.Maps;
 import net.opentsdb.common.Const;
-import net.opentsdb.pipeline7.Abstracts.*;
-import net.opentsdb.pipeline7.Implementations.*;
-import net.opentsdb.pipeline7.Interfaces.*;
+import net.opentsdb.data.MillisecondTimeStamp;
+import net.opentsdb.pipeline8.Abstracts.*;
+import net.opentsdb.pipeline8.Implementations.*;
+import net.opentsdb.pipeline8.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 
 /**
@@ -66,7 +68,7 @@ public class TimeSortedDataStore {
     
     Map<TSByteId, TS<?>> num_map = Maps.newHashMap();
     Map<TSByteId, TS<?>> string_map = Maps.newHashMap();
-    Results results = new Results(num_map, string_map);
+    Results results;
     
     public MyExecution(boolean reverse_chunks, QueryMode mode) {
       this.reverse_chunks = reverse_chunks;
@@ -81,14 +83,33 @@ public class TimeSortedDataStore {
         return;
       }
       
+      num_map.clear();
+      string_map.clear();
+      
+      TimeSpec tspec;
+      if (reverse_chunks) {
+        tspec = new DefaultTimeSpec(
+            new MillisecondTimeStamp(ts - (INTERVALS_PER_CHUNK * INTERVAL)), 
+            new MillisecondTimeStamp(ts),
+            INTERVAL,
+            ChronoUnit.MILLIS); 
+      } else {
+        tspec = new DefaultTimeSpec(
+            new MillisecondTimeStamp(ts),
+            new MillisecondTimeStamp(ts + (INTERVALS_PER_CHUNK * INTERVAL)), 
+            INTERVAL,
+            ChronoUnit.MILLIS); 
+      }
+      results = new Results(num_map, string_map, tspec);
+      
       Map<TSByteId, byte[]> nums = getChunk(DataType.NUMBERS, ts, reverse_chunks);
       for (Entry<TSByteId, byte[]> entry : nums.entrySet()) {
         TS<?> t = num_map.get(entry.getKey());
         if (t == null) {
-          t = new ArrayBackedLongTS(entry.getKey());
+          t = new ArrayBackedLongTS(entry.getKey(), tspec);
           num_map.put(entry.getKey(), t);
         }
-        ((BaseTS<?>) t).setChunk(entry.getValue());
+        ((BaseTS<?>) t).nextChunk(entry.getValue());
       }
       
       if (with_strings) {
@@ -96,10 +117,10 @@ public class TimeSortedDataStore {
         for (Entry<TSByteId, byte[]> entry : strings.entrySet()) {
           TS<?> t = string_map.get(entry.getKey());
           if (t == null) {
-            t = new ArrayBackedStringTS(entry.getKey());
+            t = new ArrayBackedStringTS(entry.getKey(), tspec);
             string_map.put(entry.getKey(), t);
           }
-          ((BaseTS<?>) t).setChunk(entry.getValue());
+          ((BaseTS<?>) t).nextChunk(entry.getValue());
         }
       }
       
@@ -170,14 +191,17 @@ public class TimeSortedDataStore {
     
   }
   
+  
   public static class Results implements QResult {
 
     Map<TSByteId, TS<?>> num_map;
     Map<TSByteId, TS<?>> string_map;
+    TimeSpec tspec;
     
-    public Results(Map<TSByteId, TS<?>> num_map, Map<TSByteId, TS<?>> string_map) {
+    public Results(Map<TSByteId, TS<?>> num_map, Map<TSByteId, TS<?>> string_map, TimeSpec tspec) {
       this.num_map = num_map;
       this.string_map = string_map;
+      this.tspec = tspec;
     }
     
     @Override
@@ -186,6 +210,11 @@ public class TimeSortedDataStore {
       results.addAll(num_map.values());
       results.addAll(string_map.values());
       return results;
+    }
+
+    @Override
+    public TimeSpec timeSpec() {
+      return tspec;
     }
     
   }
@@ -217,8 +246,7 @@ public class TimeSortedDataStore {
         continue;
       }
       
-      byte[] data = new byte[INTERVALS_PER_CHUNK * 16];
-      long local_ts = ts;
+      byte[] data = new byte[INTERVALS_PER_CHUNK * 8];
       int idx = reverse ? data.length - 8 : 0;
       
       if (reverse) {
@@ -226,18 +254,12 @@ public class TimeSortedDataStore {
           //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
           System.arraycopy(Bytes.fromLong(1), 0, data, idx, 8);
           idx -= 8;
-          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
-          idx -= 8;
-          local_ts -= INTERVAL;
         }
       } else {
         for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
-          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
-          idx += 8;
           //System.arraycopy(Bytes.fromLong(i + 1 * x), 0, payload, idx, 8);
           System.arraycopy(Bytes.fromLong(1), 0, data, idx, 8);
           idx += 8;
-          local_ts += INTERVAL;
         }
       }
       results.put(timeseries.get(x), data);
@@ -253,27 +275,20 @@ public class TimeSortedDataStore {
         continue;
       }
       
-      byte[] data = new byte[INTERVALS_PER_CHUNK * (8 + 3)];
-      long local_ts = ts;
+      byte[] data = new byte[INTERVALS_PER_CHUNK * 3];
       int idx = reverse ? data.length - 3 : 0;
       
       if (reverse) {
         for (int i = INTERVALS_PER_CHUNK - 1; i >= 0; i--) {
           System.arraycopy(i % 2 == 0 ? "foo".getBytes(Const.UTF8_CHARSET) : "bar".getBytes(Const.UTF8_CHARSET), 
               0, data, idx, 3);
-          idx -= 8;
-          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
           idx -= 3;
-          local_ts -= INTERVAL;
         }
       } else {
         for (int i = 0; i < INTERVALS_PER_CHUNK; i++) {
-          System.arraycopy(Bytes.fromLong(local_ts), 0, data, idx, 8);
-          idx += 8;
           System.arraycopy(i % 2 == 0 ? "foo".getBytes(Const.UTF8_CHARSET) : "bar".getBytes(Const.UTF8_CHARSET), 
               0, data, idx, 3);
           idx += 3;
-          local_ts += INTERVAL;
         }
       }
       results.put(timeseries.get(x), data);

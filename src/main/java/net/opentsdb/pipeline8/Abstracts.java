@@ -1,17 +1,19 @@
-package net.opentsdb.pipeline7;
+package net.opentsdb.pipeline8;
 
 import java.util.Iterator;
 
 import net.opentsdb.data.TimeSeriesDataType;
-import net.opentsdb.pipeline7.Interfaces.*;
+import net.opentsdb.pipeline8.Interfaces.*;
 
 public class Abstracts {
   public static abstract class BaseTS<T extends TimeSeriesDataType> implements TS<T> {
     protected byte[] dps;
+    protected TimeSpec time_spec;
     protected TSByteId id;
     
-    public BaseTS(final TSByteId id) {
+    public BaseTS(final TSByteId id, TimeSpec time_spec) {
       this.id = id;
+      this.time_spec = time_spec;
     }
     
     @Override
@@ -19,12 +21,13 @@ public class Abstracts {
       return id;
     }
     
-    public void setChunk(final byte[] data) {
+    public void nextChunk(final byte[] data) {
       dps = data;
     }
     
     public abstract class LocalIterator implements Iterator<TSValue<T>> {
       protected int idx;
+      protected int time_idx;
       
       @Override
       public boolean hasNext() {

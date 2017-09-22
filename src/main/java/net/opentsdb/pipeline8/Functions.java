@@ -1,4 +1,4 @@
-package net.opentsdb.pipeline7;
+package net.opentsdb.pipeline8;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -13,12 +13,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 
-import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
 import net.opentsdb.data.TimeStamp;
-import net.opentsdb.pipeline7.TimeSortedDataStore;
-import net.opentsdb.pipeline7.Implementations.*;
-import net.opentsdb.pipeline7.Interfaces.*;
+import net.opentsdb.pipeline8.TimeSortedDataStore;
+import net.opentsdb.pipeline8.Implementations.*;
+import net.opentsdb.pipeline8.Interfaces.*;
 import net.opentsdb.utils.Bytes;
 import net.opentsdb.utils.Pair;
 
@@ -27,6 +26,7 @@ public class Functions {
   public static class FilterNumsByString implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
+    TimeSpec tspec;
     Map<TSByteId, TS<?>> time_series = Maps.newHashMap();
     
     protected FilterNumsByString() { }
@@ -84,6 +84,7 @@ public class Functions {
 
     @Override
     public void onNext(QResult next) {
+      tspec = next.timeSpec();
       for (TS<?> ts : next.series()) {
         TS<?> it = time_series.get(ts.id());
         if (it == null) {
@@ -222,6 +223,11 @@ public class Functions {
       }
       
     }
+
+    @Override
+    public TimeSpec timeSpec() {
+      return tspec;
+    }
     
   }
   
@@ -229,10 +235,12 @@ public class Functions {
     StreamListener upstream;
     QExecutionPipeline downstream;
     Map<TSByteId, TS<?>> time_series = Maps.newHashMap();
+    TimeSpec tspec;
     
     GroupBy parent;
     boolean cache = false;
     List<Map<TSByteId, byte[]>> local_cache = Lists.newArrayList();
+    List<TimeSpec> specs = Lists.newArrayList();
     int cache_idx = 0;
     
     protected GroupBy() { }
@@ -250,9 +258,11 @@ public class Functions {
 
     @Override
     public void onNext(QResult next) {
+      tspec = next.timeSpec();
       try {
       if (cache) {
         parent.local_cache.add(Maps.newHashMap());
+        parent.specs.add(next.timeSpec());
       }
       
       time_series.clear();
@@ -266,11 +276,8 @@ public class Functions {
         id.addMetric(ts.id().metrics().get(0));
         id.addTag("host", ts.id().tags().get("host"));
         id.addAggTag("dc");
-        GBIterator extant = (GBIterator) time_series.get(id);
-        if (extant == null) {
-          extant = new GBIterator(id);
-          time_series.put(id, extant);
-        }
+        GBIterator extant = new GBIterator(id);
+        time_series.put(id, extant);
         extant.addSource((TS<NType>) ts);
       }
       
@@ -334,6 +341,7 @@ public class Functions {
         long next_ts = Long.MAX_VALUE;
         TimeStamp ts = new MillisecondTimeStamp(0);
         long sum = 0;
+        int time_idx;
         
         Iterator<TSValue<NType>>[] iterators;
         TSValue<NType>[] values;
@@ -389,10 +397,8 @@ public class Functions {
             }
           }
           
-          ts.updateMsEpoch(next_ts);
+          tspec.updateTimestamp(time_idx++, ts);
           if (cache) {
-            System.arraycopy(Bytes.fromLong(next_ts), 0, data, cache_idx, 8);
-            cache_idx += 8;
             System.arraycopy(Bytes.fromLong(sum), 0, data, cache_idx, 8);
             cache_idx += 8;
             if (!has_next) {
@@ -446,7 +452,6 @@ public class Functions {
           return this;
         }
       }
-
       
       @Override
       public TypeToken<NType> type() {
@@ -481,14 +486,12 @@ public class Functions {
         
         // work from cache.
         // TODO - fall through in case the cache has been exhausted. That'll get ugly.
-        Map<TSByteId, byte[]> chunk = local_cache.get(cache_idx++);
+        Map<TSByteId, byte[]> chunk = local_cache.get(cache_idx);
+        TimeSpec spec = specs.get(cache_idx++);
         for (Entry<TSByteId, byte[]> entry : chunk.entrySet()) {
-          ArrayBackedLongTS extant = (ArrayBackedLongTS) time_series.get(entry.getKey());
-          if (extant == null) {
-            extant = new ArrayBackedLongTS(entry.getKey());
-            time_series.put(entry.getKey(), extant);
-          }
-          extant.setChunk(entry.getValue());
+          ArrayBackedLongTS extant = new ArrayBackedLongTS(entry.getKey(), spec);
+          time_series.put(entry.getKey(), extant);
+          extant.nextChunk(entry.getValue());
         }
         upstream.onNext(this);
       } else {
@@ -520,6 +523,11 @@ public class Functions {
     public QueryMode getMode() {
       return downstream.getMode();
     }
+
+    @Override
+    public TimeSpec timeSpec() {
+      return tspec;
+    }
   }
 
   public static class DiffFromStdD implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
@@ -527,6 +535,7 @@ public class Functions {
     QExecutionPipeline downstream;
     Map<TSByteId, TS<?>> time_series = Maps.newHashMap();
     Map<TSByteId, Pair<Long, Double>> sums = Maps.newHashMap();
+    TimeSpec tspec;
     
     boolean initialized = false;
     
@@ -571,6 +580,7 @@ public class Functions {
 
     @Override
     public void onNext(QResult next) {
+      tspec = next.timeSpec();
       for (TS<?> ts : next.series()) {
         if (ts.type() != NType.TYPE) {
           continue;
@@ -733,6 +743,11 @@ public class Functions {
     public QueryMode getMode() {
       return downstream.getMode();
     }
+
+    @Override
+    public TimeSpec timeSpec() {
+      return tspec;
+    }
   }
 
   public static class ExpressionProc implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
@@ -740,6 +755,7 @@ public class Functions {
     QExecutionPipeline downstream;
     Map<TSByteId, TS<?>> time_series = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
+    TimeSpec tspec;
     
     public ExpressionProc(QExecutionPipeline downstream_execution) {
       this.upstream = downstream_execution.getListener();
@@ -792,6 +808,7 @@ public class Functions {
 
     @Override
     public void onNext(QResult next) {
+      tspec = next.timeSpec();
       time_series.clear();
       for (TS<?> ts : next.series()) {
         if (ts.type() != NType.TYPE) {
@@ -945,6 +962,11 @@ public class Functions {
         
       }
       
+    }
+
+    @Override
+    public TimeSpec timeSpec() {
+      return tspec;
     }
   }
 
