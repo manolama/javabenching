@@ -18,8 +18,8 @@
     <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <jmh.version>1.19</jmh.version>
-      <opentsdb.common.version>3.0.83-20170902.181040-28</opentsdb.common.version>
-      <opentsdb.core.version>3.0.83-20170902.181047-28</opentsdb.core.version>
+      <opentsdb.common.version>3.0.83-SNAPSHOT</opentsdb.common.version>
+      <opentsdb.core.version>3.0.83-SNAPSHOT</opentsdb.core.version>
       <javac.target>1.8</javac.target>
       <uberjar.name>benchmarks</uberjar.name>
       <protobuf.version>3.0.0-beta-2</protobuf.version>
@@ -440,6 +440,12 @@
     <artifactId>quasar-core</artifactId>
     <version>0.7.9</version>
 </dependency>
+
+<dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>zero-allocation-hashing</artifactId>
+            <version>0.6</version>
+        </dependency>
 
 <dependency>
       <groupId>ch.qos.logback</groupId>
