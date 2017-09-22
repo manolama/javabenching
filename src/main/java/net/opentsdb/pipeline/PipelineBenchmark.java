@@ -1,4 +1,4 @@
-package net.opentsdb.pipeline4;
+package net.opentsdb.pipeline;
 
 import java.util.Iterator;
 
@@ -8,25 +8,29 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jol.info.ClassLayout;
+import org.openjdk.jol.vm.VM;
 
 import com.stumbleupon.async.Deferred;
 
-import net.opentsdb.pipeline4.TimeSortedDataStore;
-import net.opentsdb.pipeline4.Abstracts.*;
-import net.opentsdb.pipeline4.Functions.*;
-import net.opentsdb.pipeline4.Interfaces.*;
+import net.opentsdb.data.TimeSeriesValue;
+import net.opentsdb.data.types.numeric.NumericType;
+import net.opentsdb.pipeline.Abstracts.StringType;
+import net.opentsdb.pipeline.Functions.*;
+import net.opentsdb.pipeline.Implementations.*;
+import net.opentsdb.pipeline.Interfaces.*;
 
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
-public class Main {
-
+public class PipelineBenchmark {
+  
   /**
    * In this case the API gives a QueryExecutionPipeline that the user would
    * provide an asynchronous listener. To initiate the stream, the caller just
    * calls {@link QExecutionPipeline#fetchNext()}.
    */
   @Benchmark
-  public static void iteratorsVersion2WithComplexTypes(Blackhole black_hole) {
+  public static void iteratorsWithComplexTypes(Blackhole black_hole) {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     
     /** This section would be hidden behind the query engine. Users just 
@@ -44,7 +48,6 @@ public class Main {
      */
     class MyListener implements StreamListener {
       QExecutionPipeline exec;
-      int iterations = 0;
       Deferred<Object> d = new Deferred<Object>();
       
       public MyListener(QExecutionPipeline exec) {
@@ -80,9 +83,9 @@ public class Main {
               black_hole.consume(ts.id().toString());
             }
             Iterator<?> it = ts.iterator();
-            if (ts.type() == NType.TYPE) {
+            if (ts.type() == NumericType.TYPE) {
               while (it.hasNext()) {
-                TSValue<NType> v = (TSValue<NType>) it.next();
+                TimeSeriesValue<NumericType> v = (TimeSeriesValue<NumericType>) it.next();
                 if (black_hole == null) {
                   System.out.println("  " + v.timestamp().epoch() + " " + v.value().toDouble());
                 } else {
@@ -91,7 +94,7 @@ public class Main {
               }
             } else {
               while (it.hasNext()) {
-                TSValue<StringType> v = (TSValue<StringType>) it.next();
+                TimeSeriesValue<StringType> v = (TimeSeriesValue<StringType>) it.next();
                 if (black_hole == null) {
                   System.out.println("  " + v.timestamp().epoch() + " " + v.value().values());
                 } else {
@@ -104,7 +107,6 @@ public class Main {
             System.out.println("-------------------------");
           }
           
-          iterations++;
           if (mode == QueryMode.CLIENT_STREAM) {
             exec.fetchNext();
           }
@@ -136,8 +138,21 @@ public class Main {
       e.printStackTrace();
     }
     
-    //System.out.println(ClassLayout.parseInstance(exec).toPrintable());
-    
     store.pool.shutdownNow();
   }
+
+  public static void version1Sizes() {
+    System.out.println(VM.current().details());
+    
+    System.out.println(ClassLayout.parseClass(QExecutionPipeline.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(TS.class).toPrintable());
+    
+    System.out.println(ClassLayout.parseClass(FilterNumsByString.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(GroupBy.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(DiffFromStdD.class).toPrintable());
+    
+    System.out.println(ClassLayout.parseClass(ArrayBackedLongTS.class).toPrintable());
+    System.out.println(ClassLayout.parseClass(MutableStringType.class).toPrintable());
+  }
+  
 }

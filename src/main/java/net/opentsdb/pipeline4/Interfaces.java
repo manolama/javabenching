@@ -62,7 +62,7 @@ public class Interfaces {
     
   }
   
-  public interface  StringType extends TimeSeriesDataType {
+  public interface StringType extends TimeSeriesDataType {
     /** The data type reference to pass around. */
     public static final TypeToken<StringType> TYPE = 
         TypeToken.of(StringType.class);

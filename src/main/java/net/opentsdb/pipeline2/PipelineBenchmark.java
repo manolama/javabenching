@@ -18,7 +18,7 @@ import net.opentsdb.pipeline2.Interfaces.*;
 
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
-public class Main {
+public class PipelineBenchmark {
 
   @Benchmark
   public static void listsOfComplexTypes(Blackhole black_hole) {
@@ -35,7 +35,6 @@ public class Main {
      */
     class MyListener implements StreamListener {
       QExecutionPipeline exec;
-      int iterations = 0;
       Deferred<Object> d = new Deferred<Object>();
       
       public MyListener(QExecutionPipeline exec) {
@@ -94,7 +93,6 @@ public class Main {
             System.out.println("-------------------------");
           }
           
-          iterations++;
           if (mode == QueryMode.CLIENT_STREAM) {
             exec.fetchNext();
           }
@@ -125,9 +123,7 @@ public class Main {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    
-    //System.out.println(ClassLayout.parseInstance(exec).toPrintable());
-    
+        
     store.pool.shutdownNow();
   }
 }
