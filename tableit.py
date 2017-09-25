@@ -8,6 +8,7 @@ import sys
 import re
 from terminaltables import AsciiTable
 import argparse
+import csv
 
 # https://stackoverflow.com/questions/287871/print-in-terminal-with-colors-using-python
 class bcolors:
@@ -25,13 +26,24 @@ parser.add_argument('--stats', type=str,
                     default="benchmark,max", dest='stats',
                     help='A comma separated list of stats to print for each measurement. TODO - list')
 parser.add_argument('--secondary', type=str,
-                    default="gc.count,gc.time", dest='secondary',
-                    help='A comma separated list of secondary metrics to print for each benchmark. TODO - list')
+                    dest='secondary',
+                    help='A comma separated list of secondary metrics to print for each benchmark. If empty, print em all')
+parser.add_argument('--csv', type=str,
+                    default="", dest='csv',
+                    help='Path to a CSV file to write the results to.')
 args = parser.parse_args()
 
-stats = args.stats.split(",")
-secondary = args.secondary.split(",")
+if args.stats:
+    stats = args.stats.split(",")
+else:
+    stats = []
+if args.secondary:
+    secondary = args.secondary.split(",")
+else:
+    secondary = []
+csvfile = args.csv
 
+print "Length of secondary: ", len(secondary), ": ", secondary
 # Variables to fill up
 benchmarks = {}
 last_benchmark = None
@@ -103,7 +115,7 @@ keys = []
 headers = ["Benchmark"]
 b = benchmarks.itervalues().next()
 for key in b:
-    if key in secondary or key == "benchmark":
+    if len(secondary) < 1 or key in secondary or key == "benchmark":
         for stat in b[key].keys():
             if stat in stats:
                 keys.append(stat)
@@ -119,7 +131,7 @@ table_data.append(headers)
 for bench in benchmarks:
     data = [bench]
     for key in benchmarks[bench]:
-        if key in secondary or key == "benchmark":
+        if len(secondary) < 1 or key in secondary or key == "benchmark":
             for stat in benchmarks[bench][key].keys():
                 if stat in stats:
                     data.append(benchmarks[bench][key][stat])
@@ -127,3 +139,18 @@ for bench in benchmarks:
 
 table = AsciiTable(table_data)
 print table.table
+
+# Print out the CSV file if we're told to.
+if csvfile:
+    with open(csvfile, 'wb') as csvfile:
+        mycsv = csv.writer(csvfile, delimiter=',',
+                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        mycsv.writerow(headers)
+        for bench in benchmarks:
+            data = [bench]
+            for key in benchmarks[bench]:
+                if len(secondary) < 1 or key in secondary or key == "benchmark":
+                    for stat in benchmarks[bench][key].keys():
+                        if stat in stats:
+                            data.append(benchmarks[bench][key][stat])
+            mycsv.writerow(data)
