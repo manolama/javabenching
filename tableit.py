@@ -109,6 +109,19 @@ for line in sys.stdin:
            cols['ci_lower'] = match.group('ci_lower')
            cols['ci_upper'] = match.group('ci_upper')
            continue
+       
+        match = re.search("\xE2\x89\x88 0 ?", line)
+        if match:
+           # in this case there weren't any results. So fill in zeros
+           cols['min'] = float('nan')
+           cols['avg'] = float('nan')
+           cols['max'] = float('nan')
+           cols['stdev'] = float('nan')
+           cols['ci_percent'] = float('nan')
+           cols['ci_lower'] = float('nan')
+           cols['ci_upper'] = float('nan')
+           cols['units'] = "NA"
+           continue
 
 # All done so lets format!!
 keys = []

@@ -104,7 +104,6 @@ public class Functions {
       TS<NType> number;
       TS<StringType> string;
       
-      
       public void setTS(TS<?> ts) {
         if (ts.type() == NType.TYPE && number == null) {
           number = (TS<NType>) ts;
@@ -116,37 +115,30 @@ public class Functions {
       class LocalIterator implements Iterator<TSValue<NType>>, TSValue<NType>, NType {
         Iterator<TSValue<NType>> nit;
         Iterator<TSValue<StringType>> sit;
-        double value;
-        TimeStamp ts;
+        double current_value;
+        TimeStamp current_ts = new MillisecondTimeStamp(0);
+        double next_value;
+        TimeStamp next_ts = new MillisecondTimeStamp(0);
 
         boolean has_next = false;
         
         LocalIterator() {
           nit = number.iterator();
           sit = string.iterator();
-          has_next = sit.hasNext();
+          advance();
         }
         
         void advance() {
           // advance
           has_next = false;
-          if (string.iterator().hasNext()) {
+          while (sit.hasNext()) {
             TSValue<StringType> s = sit.next();
             TSValue<NType> n = nit.next();
-            while (s != null && !(s.value().values().get(0).equals("foo"))) {
-              if (sit.hasNext()) {
-                s = sit.next();
-                n = nit.next();
-              } else {
-                s = null;
-                n = null;
-              }
-            }
-            
-            if (s != null) {
-              value = n.value().toDouble();
-              ts = n.timestamp();
+            if (s.value().values().get(0).equals("foo")) {
+              next_value = n.value().toDouble();
+              next_ts.update(n.timestamp());
               has_next = true;
+              break;
             }
           }
         }
@@ -158,6 +150,8 @@ public class Functions {
 
         @Override
         public TSValue<NType> next() {
+          current_value = next_value;
+          current_ts.update(next_ts);
           advance();
           return this;
         }
@@ -175,7 +169,7 @@ public class Functions {
 
         @Override
         public double doubleValue() {
-          return value;
+          return current_value;
         }
 
         @Override
@@ -186,12 +180,12 @@ public class Functions {
 
         @Override
         public double toDouble() {
-          return value;
+          return current_value;
         }
 
         @Override
         public TimeStamp timestamp() {
-          return ts;
+          return current_ts;
         }
 
         @Override
