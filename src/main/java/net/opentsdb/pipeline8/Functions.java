@@ -15,6 +15,7 @@ import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.MillisecondTimeStamp;
 import net.opentsdb.data.TimeStamp;
+import net.opentsdb.data.TimeStamp.TimeStampComparator;
 import net.opentsdb.pipeline8.TimeSortedDataStore;
 import net.opentsdb.pipeline8.Implementations.*;
 import net.opentsdb.pipeline8.Interfaces.*;
@@ -85,6 +86,7 @@ public class Functions {
     @Override
     public void onNext(QResult next) {
       tspec = next.timeSpec();
+      time_series.clear();
       for (TS<?> ts : next.series()) {
         TS<?> it = time_series.get(ts.id());
         if (it == null) {
@@ -120,12 +122,15 @@ public class Functions {
         TimeStamp current_ts = new MillisecondTimeStamp(0);
         long next_value;
         TimeStamp next_ts = new MillisecondTimeStamp(0);
+        TimeStamp ts = new MillisecondTimeStamp(0);
+        int ts_idx = 0;
 
         boolean has_next = false;
         
         LocalIterator() {
           nit = number.iterator();
           sit = string.iterator();
+          tspec.updateTimestamp(ts_idx, ts);
           advance();
         }
         
@@ -151,9 +156,20 @@ public class Functions {
 
         @Override
         public TSValue<NType> next() {
+          has_next = false;
           current_value = next_value;
           current_ts.update(next_ts);
-          advance();
+          
+          tspec.updateTimestamp(ts_idx++, ts);
+          if (ts.compare(TimeStampComparator.NE, current_ts)) {
+            current_value = -1; // would be a nan or fill
+            current_ts.update(ts);
+          } else {
+            advance();
+          }
+          if (ts.msEpoch() + tspec.interval() < tspec.end().msEpoch()) {
+            has_next = true;
+          }
           return this;
         }
 
@@ -269,8 +285,11 @@ public class Functions {
         id.addMetric(ts.id().metrics().get(0));
         id.addTag("host", ts.id().tags().get("host"));
         id.addAggTag("dc");
-        GBIterator extant = new GBIterator(id);
-        time_series.put(id, extant);
+        GBIterator extant = (GBIterator) time_series.get(id);
+        if (extant == null) {
+          extant = new GBIterator(id);
+          time_series.put(id, extant);
+        }
         extant.addSource((TS<NType>) ts);
       }
       
@@ -390,7 +409,8 @@ public class Functions {
             }
           }
           
-          tspec.updateTimestamp(time_idx++, ts);
+          //tspec.updateTimestamp(time_idx++, ts);
+          ts.updateMsEpoch(next_ts);
           if (cache) {
             System.arraycopy(Bytes.fromLong(sum), 0, data, cache_idx, 8);
             cache_idx += 8;
