@@ -105,7 +105,6 @@ public class Functions {
       TS<NType> number;
       TS<StringType> string;
       
-      
       public void setTS(TS<?> ts) {
         if (ts.type() == NType.TYPE && number == null) {
           number = (TS<NType>) ts;
@@ -117,9 +116,9 @@ public class Functions {
       class LocalIterator implements Iterator<TSValue<NType>>, TSValue<NType>, NType {
         Iterator<TSValue<NType>> nit;
         Iterator<TSValue<StringType>> sit;
-        double current_value;
+        long current_value;
         TimeStamp current_ts = new MillisecondTimeStamp(0);
-        double next_value;
+        long next_value;
         TimeStamp next_ts = new MillisecondTimeStamp(0);
 
         boolean has_next = false;
@@ -137,7 +136,7 @@ public class Functions {
             TSValue<StringType> s = sit.next();
             TSValue<NType> n = nit.next();
             if (s.value().values().get(0).equals("foo")) {
-              next_value = n.value().toDouble();
+              next_value = n.value().longValue();
               next_ts.update(n.timestamp());
               has_next = true;
               break;
@@ -165,8 +164,7 @@ public class Functions {
 
         @Override
         public long longValue() {
-          // TODO Auto-generated method stub
-          return 0;
+          return current_value;
         }
 
         @Override
@@ -359,7 +357,7 @@ public class Functions {
         public TSValue<NType> next() {
           has_next = false;
           try {
-          
+            
           long next_next_ts = Long.MAX_VALUE;
           sum = 0;
           for (int i = 0; i < sources.size(); i++) {
@@ -443,7 +441,6 @@ public class Functions {
           return this;
         }
       }
-
       
       @Override
       public TypeToken<NType> type() {
