@@ -40,7 +40,7 @@ public class TimeSortedDataStore {
   
   public ExecutorService pool = Executors.newFixedThreadPool(1);
   public List<TSByteId> timeseries;
-  public long start_ts = 0; // in ms
+  public long start_ts = 1000; // in ms
   public boolean with_strings;
   
   public TimeSortedDataStore(boolean with_strings) {
@@ -190,7 +190,6 @@ public class TimeSortedDataStore {
     }
     
   }
-  
   
   public static class Results implements QResult {
 
