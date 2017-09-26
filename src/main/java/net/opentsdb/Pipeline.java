@@ -46,6 +46,6 @@ public class Pipeline {
     //net.opentsdb.pipeline6.PipelineBenchmark.iteratorsWithXXHashIds(null);
     //net.opentsdb.pipeline7.PipelineBenchmark.iteratorsWithStringIds(null);
     //net.opentsdb.pipeline8.PipelineBenchmark.iteratorsWithDownsampledData(null);
-    net.opentsdb.pipeline9.PipelineBenchmark.iteratorsWithLazyInstantiation(null);
+    net.opentsdb.pipeline9.PipelineBenchmark.iteratorsWithLazyInstantiationAndDownsampling(null);
   }
 }

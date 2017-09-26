@@ -1,6 +1,5 @@
 package net.opentsdb.pipeline9;
 
-import java.util.Collection;
 import java.util.Iterator;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -9,6 +8,8 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jol.info.ClassLayout;
+import org.openjdk.jol.vm.VM;
 
 import com.stumbleupon.async.Deferred;
 
@@ -26,7 +27,7 @@ public class PipelineBenchmark {
    * calls {@link QExecutionPipeline#fetchNext()}.
    */
   @Benchmark
-  public static void iteratorsWithLazyInstantiation(Blackhole black_hole) {
+  public static void iteratorsWithLazyInstantiationAndDownsampling(Blackhole black_hole) {
     QueryMode mode = QueryMode.CLIENT_STREAM;
     
     /** This section would be hidden behind the query engine. Users just 
