@@ -7,6 +7,11 @@ E.g. ``mvn clean package && java -jar target/benchmarks.jar .*pipeline.* -f 1 -w
 
 Run ``java -jar target/benchmarks.jar -help`` to print out the various options available.
 
+A script is available ``tableit.py`` to convert the JMH output to a CSV that aligns the test results into columns instead of rows so it's easier to sort. To use it either dump the JMH run to a log file and then pipe that into the script or pipe the JMH run directly into the script. E.g.
+
+``mvn clean package && java -jar target/benchmarks.jar .*pipeline.* -f 1 -wi 5 -i 25 -tu ns -prof gc > gc.log``
+``cat gc.log | python tableit.py --csv my.csv``
+
 ## Pipelines
 
 OpenTSDB 3.x's new query pipeline must be as performant yet flexible as possible so I've banged out a number of various implementations all performing the same tasks:
@@ -39,6 +44,10 @@ This is an attempt at trying various coding bits to force the JVM into optimizin
 ## Streams Vs Iterators
 
 In TSDB, data points are passed through iterators when querying. Java 8 has a nifty new Stream feature that lets you compose flows and even run operations in parallel! Sounds perfect for iterating over batches of time series in parallel. But in practice, stream performance is *much* slower than good olde iteration. So while streams *look* like they'll save you a ton of code (and they can), you make a major performance tradeoff unless you're doing something so inane that an iterative mechanism would add a few more lines of code.
+
+## Distributed Queue's
+
+For 3.x we'd like a query protection mechanism that tracks queries by users and throttles them so that one user doesn't overwhelm the system. One way to do this is fair-use queues that requires a query coordination system with shared state. I'm looking at various shared queued options here to see what works the best. Ideally I'd like a distributed priority queue but haven't found one yet.
 
 ## Stack Overflow Avoidance
 
