@@ -1,18 +1,17 @@
-/**
- * Copyright 2017 Chris Larsen.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// This file is part of OpenTSDB.
+// Copyright (C) 2017-2018  The OpenTSDB Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package net.opentsdb;
 
 import static java.util.stream.Collectors.groupingBy;
@@ -22,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,16 +41,15 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.stumbleupon.async.Deferred;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.schedulers.Schedulers;
 import net.opentsdb.data.MergedTimeSeriesId;
-import net.opentsdb.data.SimpleStringTimeSeriesId;
+import net.opentsdb.data.BaseTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.utils.Bytes;
-import net.opentsdb.utils.Bytes.ByteMap;
 
 /**
  * This mimics a read from OpenTSDB that pulls {@code TIMESERIES} with blocks of
@@ -100,9 +99,9 @@ public class GroupByAndSum {
   @Benchmark
   public static void runStreamedSerial(Context context, Blackhole blackHole) {
     List<TS> results = context.source.stream()
-        .map(series -> new AbstractMap.SimpleEntry<byte[], TS>(series.id.tags().get(KEY), series))
+        .map(series -> new AbstractMap.SimpleEntry<String, TS>(series.id.tags().get(KEY), series))
         .collect(
-            groupingBy(Map.Entry::getKey, ByteMap::new, mapping(Map.Entry::getValue, toList()))
+            groupingBy(Map.Entry::getKey, HashMap::new, mapping(Map.Entry::getValue, toList()))
          ).entrySet().stream()
         .map(e -> {
           MergedTimeSeriesId.Builder id = MergedTimeSeriesId.newBuilder();
@@ -132,9 +131,9 @@ public class GroupByAndSum {
   @Benchmark
   public static void runStreamedParallel(Context context, Blackhole blackHole) {
     List<TS> results = context.source.stream()
-        .map(series -> new AbstractMap.SimpleEntry<byte[], TS>(series.id.tags().get(KEY), series))
+        .map(series -> new AbstractMap.SimpleEntry<String, TS>(series.id.tags().get(KEY), series))
         .collect(
-            groupingBy(Map.Entry::getKey, ByteMap::new, mapping(Map.Entry::getValue, toList()))
+            groupingBy(Map.Entry::getKey, HashMap::new, mapping(Map.Entry::getValue, toList()))
          ).entrySet().stream()
         .parallel()
         .map(e -> {
@@ -159,7 +158,7 @@ public class GroupByAndSum {
   @Benchmark
   public static void runTraditional(Context context, Blackhole blackHole) {
     // group by
-    ByteMap<List<TS>> grouped = new ByteMap<List<TS>>();
+    Map<String, List<TS>> grouped = Maps.newHashMap();
     for (final TS t : context.source) {
       List<TS> l = grouped.get(t.id.tags().get(KEY));
       if (l == null) {
@@ -212,7 +211,7 @@ public class GroupByAndSum {
   @Benchmark
   public static void runTraditionalParallel(Context context, Blackhole blackHole) {
     // group by
-    ByteMap<List<TS>> grouped = new ByteMap<List<TS>>();
+    Map<String, List<TS>> grouped = Maps.newHashMap();
     for (final TS t : context.source) {
       List<TS> l = grouped.get(t.id.tags().get(KEY));
       if (l == null) {
@@ -369,8 +368,8 @@ public class GroupByAndSum {
     }
     
     public TS(final long ts, final int count, String tagv) {
-      id = SimpleStringTimeSeriesId.newBuilder()
-          .setMetrics(Lists.newArrayList("Metric1"))
+      id = BaseTimeSeriesId.newBuilder()
+          .setMetric("Metric1")
           .addTags("tagk", tagv)
           .build();
       data = new byte[count * 16];
