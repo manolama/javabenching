@@ -1,3 +1,17 @@
+// This file is part of OpenTSDB.
+// Copyright (C) 2017  The OpenTSDB Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package net.opentsdb.pipeline2;
 
 import java.util.List;
@@ -35,7 +49,7 @@ public class Implementations {
       while (idx < dps.length) {
         TimeStamp ts = new MillisecondTimeStamp(Bytes.getLong(dps, idx));
         idx += 8;
-        results.add(new MutableNumericType(id, ts, Bytes.getLong(dps, idx), 1));
+        results.add(new MutableNumericType(ts, Bytes.getLong(dps, idx)));
         idx += 8;
       }
       return results;
@@ -64,41 +78,30 @@ public class Implementations {
         byte[] s = new byte[3];
         System.arraycopy(dps, idx, s, 0, 3);
         idx += 3;
-        results.add(new MutableStringType(id, ts, Lists.newArrayList(new String(s, Const.UTF8_CHARSET))));
-      }
+        results.add(new MutableStringType(ts, Lists.newArrayList(new String(s, Const.UTF8_CHARSET))));      }
       return results;
     }
     
   }
 
   public static class MutableStringType extends StringType implements TimeSeriesValue<StringType> {
-    /** A reference to the ID of the series this data point belongs to. */
-    private final TimeSeriesId id;
-    
     /** The timestamp for this data point. */
     private TimeStamp timestamp;
     
     private List<String> values = Lists.newArrayList();
     
-    /** The number of real values behind this data point. */
-    private int reals = 0;
-    
-    public MutableStringType(TimeSeriesId id) {
-      this.id = id;
+    public MutableStringType() {
       timestamp = new MillisecondTimeStamp(0);
     }
     
-    public MutableStringType(TimeSeriesId id, TimeStamp ts, List<String> values) {
-      this.id = id;
+    public MutableStringType(TimeStamp ts, List<String> values) {
       this.timestamp = ts;
       this.values = values;
-      reals = 1;
     }
     
     public void reset(TimeStamp ts, List<String> values, int reals) {
       timestamp.update(ts);
       this.values = values;
-      this.reals = reals;
     }
     
     @Override
@@ -106,11 +109,6 @@ public class Implementations {
       return values;
     }
     
-    @Override
-    public TimeSeriesId id() {
-      return id;
-    }
-
     @Override
     public TimeStamp timestamp() {
       return timestamp;
@@ -122,19 +120,8 @@ public class Implementations {
     }
 
     @Override
-    public int realCount() {
-      return reals;
-    }
-
-    @Override
-    public TypeToken<?> type() {
+    public TypeToken<StringType> type() {
       return StringType.TYPE;
-    }
-
-    @Override
-    public TimeSeriesValue<StringType> getCopy() {
-      // TODO Auto-generated method stub
-      return null;
     }
   }
 }
