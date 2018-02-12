@@ -1,3 +1,17 @@
+// This file is part of OpenTSDB.
+// Copyright (C) 2017  The OpenTSDB Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package net.opentsdb.pipeline;
 
 import java.util.List;
@@ -9,7 +23,7 @@ import com.google.common.collect.Lists;
 
 import avro.shaded.com.google.common.collect.Maps;
 import net.opentsdb.common.Const;
-import net.opentsdb.data.SimpleStringTimeSeriesId;
+import net.opentsdb.data.BaseTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.utils.Bytes;
 
@@ -43,8 +57,8 @@ public abstract class BaseTimeSortedDataStore {
     for (final String metric : METRICS) {
       for (final String dc : DATACENTERS) {
         for (int h = 0; h < HOSTS; h++) {
-          TimeSeriesId id = SimpleStringTimeSeriesId.newBuilder()
-              .addMetric(metric)
+          TimeSeriesId id = BaseTimeSeriesId.newBuilder()
+              .setMetric(metric)
               .addTags("dc", dc)
               .addTags("host", String.format("web%02d", h + 1))
               .build();
@@ -76,8 +90,8 @@ public abstract class BaseTimeSortedDataStore {
   Map<TimeSeriesId, byte[]> getNumbersChunk(long ts, boolean reverse) {
     Map<TimeSeriesId, byte[]> results = Maps.newHashMap();
     for (int x = 0; x < timeseries.size(); x++) {
-      if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
-          Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+      if ("sys.if.out".equals(timeseries.get(x).metric()) && 
+          "sys.if.in".equals(timeseries.get(x).metric())) {
         continue;
       }
       
@@ -112,8 +126,8 @@ public abstract class BaseTimeSortedDataStore {
   Map<TimeSeriesId, byte[]> getStringsChunk(long ts, boolean reverse) {
     Map<TimeSeriesId, byte[]> results = Maps.newHashMap();
     for (int x = 0; x < timeseries.size(); x++) {
-      if (Bytes.memcmp("sys.if.out".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0 && 
-          Bytes.memcmp("sys.if.in".getBytes(Const.UTF8_CHARSET), timeseries.get(x).metrics().get(0)) != 0) {
+      if ("sys.if.out".equals(timeseries.get(x).metric()) && 
+          "sys.if.in".equals(timeseries.get(x).metric())) {
         continue;
       }
       

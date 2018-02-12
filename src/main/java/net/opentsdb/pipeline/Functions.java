@@ -1,3 +1,17 @@
+// This file is part of OpenTSDB.
+// Copyright (C) 2017  The OpenTSDB Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package net.opentsdb.pipeline;
 
 import java.util.Arrays;
@@ -13,9 +27,8 @@ import com.google.common.reflect.TypeToken;
 import avro.shaded.com.google.common.collect.Lists;
 import avro.shaded.com.google.common.collect.Maps;
 import avro.shaded.com.google.common.collect.Sets;
-import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.SimpleStringTimeSeriesId;
+import net.opentsdb.data.BaseTimeSeriesId;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
@@ -136,8 +149,8 @@ public class Functions {
       
       public void setTS(TS<?> ts) {
         if (dp == null) {
-          dp = new MutableNumericType(ts.id());
-          last = new MutableNumericType(ts.id());
+          dp = new MutableNumericType();
+          last = new MutableNumericType();
         }
         
         if (ts.type() == NumericType.TYPE && number == null) {
@@ -253,9 +266,9 @@ public class Functions {
         }
         
         // naive group by on the host tag.
-        TimeSeriesId id = SimpleStringTimeSeriesId.newBuilder()
-            .addMetric(new String(ts.id().metrics().get(0), Const.UTF8_CHARSET))
-            .addTags("host", new String(ts.id().tags().get("host".getBytes(Const.UTF8_CHARSET)), Const.UTF8_CHARSET))
+        TimeSeriesId id = BaseTimeSeriesId.newBuilder()
+            .setMetric(ts.id().metric())
+            .addTags("host", ts.id().tags().get("host"))
             .addAggregatedTag("dc")
             .build();
         GBIterator extant = (GBIterator) time_series.get(id);
@@ -294,7 +307,7 @@ public class Functions {
       public GBIterator(TimeSeriesId id) {
         this.id = id;
         sources = Lists.newArrayList();
-        dp = new MutableNumericType(id);
+        dp = new MutableNumericType();
       }
       
       public void reset() {
@@ -382,7 +395,7 @@ public class Functions {
           }
         }
         
-        dp.reset(new MillisecondTimeStamp(next_ts), sum, 1);
+        dp.reset(new MillisecondTimeStamp(next_ts), sum);
         if (cache) {
           System.arraycopy(Bytes.fromLong(dp.timestamp().msEpoch()), 0, data, cache_idx, 8);
           cache_idx += 8;
@@ -580,9 +593,11 @@ public class Functions {
       TS<NumericType> source;
       double stdev;
       MutableNumericType dp;
+      TimeSeriesId id;
       
       public SIt(final TimeSeriesId id) {
-        dp = new MutableNumericType(id);
+        this.id = id;
+        dp = new MutableNumericType();
       }
       
       @Override
@@ -593,13 +608,13 @@ public class Functions {
       @Override
       public TimeSeriesValue<NumericType> next() {
         TimeSeriesValue<NumericType> next = source.iterator().next();
-        dp.reset(next.timestamp(), stdev - next.value().toDouble(), 1);
+        dp.reset(next.timestamp(), stdev - next.value().toDouble());
         return dp;
       }
 
       @Override
       public TimeSeriesId id() {
-        return dp.id();
+        return id;
       }
 
       @Override
@@ -744,14 +759,13 @@ public class Functions {
           continue;
         }
         
-        SimpleStringTimeSeriesId.Builder builder = SimpleStringTimeSeriesId.newBuilder()
-            .addMetric("Sum of if in and out");
-        for (Entry<byte[], byte[]> pair : ts.id().tags().entrySet()) {
-          builder.addTags(new String(pair.getKey(), Const.UTF8_CHARSET), 
-              new String(pair.getValue(), Const.UTF8_CHARSET));
+        BaseTimeSeriesId.Builder builder = BaseTimeSeriesId.newBuilder()
+            .setMetric("Sum of if in and out");
+        for (Entry<String, String> pair : ts.id().tags().entrySet()) {
+          builder.addTags(pair.getKey(), pair.getValue());
         }
-        for (byte[] tag : ts.id().aggregatedTags()) {
-          builder.addAggregatedTag(new String(tag, Const.UTF8_CHARSET));
+        for (String tag : ts.id().aggregatedTags()) {
+          builder.addAggregatedTag(tag);
         }
         
         TS<?> it = time_series.get(builder.build());
@@ -773,13 +787,15 @@ public class Functions {
       Map<String, TS<?>> series = Maps.newHashMap();
       boolean has_next = false;
       MutableNumericType dp;
+      TimeSeriesId id;
       
       public ExpressionIterator(TimeSeriesId id) {
-        dp = new MutableNumericType(id);
+        this.id = id;
+        dp = new MutableNumericType();
       }
       
       public void addSeries(TS<?> ts) {
-        if (Bytes.memcmp(ts.id().metrics().get(0), "sys.if.out".getBytes(Const.UTF8_CHARSET)) == 0) {
+        if ("sys.if.out".equals(ts.id().metric())) {
           series.put("sys.if.out", ts);
         } else {
           series.put("sys.if.in", ts);
@@ -810,13 +826,13 @@ public class Functions {
             has_next = ts.iterator().hasNext();
           }
         }
-        dp.reset(new MillisecondTimeStamp(timestamp), sum, series.size());
+        dp.reset(new MillisecondTimeStamp(timestamp), sum);
         return dp;
       }
 
       @Override
       public TimeSeriesId id() {
-        return dp.id();
+        return id;
       }
 
       @Override
