@@ -198,6 +198,12 @@ public class Functions {
         public NType value() {
           return this;
         }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
       }
       
       @Override
@@ -443,6 +449,12 @@ public class Functions {
         public NType value() {
           return this;
         }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
       }
       
       public Collection<TypeToken<?>> types() {
@@ -660,6 +672,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
 
       }
@@ -918,6 +936,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
 
       }

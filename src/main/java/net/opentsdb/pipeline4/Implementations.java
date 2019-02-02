@@ -22,7 +22,8 @@ import com.google.common.reflect.TypeToken;
 import avro.shaded.com.google.common.collect.Lists;
 import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesDataType;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.pipeline4.Abstracts.*;
 import net.opentsdb.pipeline4.Interfaces.*;
@@ -32,7 +33,7 @@ public class Implementations {
 
   public static class ArrayBackedLongTS extends BaseTS<NType> {
     
-    public ArrayBackedLongTS(TimeSeriesId id) {
+    public ArrayBackedLongTS(TimeSeriesStringId id) {
       super(id);
     }
 
@@ -101,6 +102,12 @@ public class Implementations {
       public NType value() {
         return this;
       }
+
+      @Override
+      public TypeToken<? extends TimeSeriesDataType> type() {
+        // TODO Auto-generated method stub
+        return null;
+      }
       
     }
   }
@@ -109,7 +116,7 @@ public class Implementations {
     TimeStamp ts = new MillisecondTimeStamp(0);
     String value = null;
     
-    public ArrayBackedStringTS(TimeSeriesId id) {
+    public ArrayBackedStringTS(TimeSeriesStringId id) {
       super(id);
     }
 
@@ -155,6 +162,12 @@ public class Implementations {
       @Override
       public StringType value() {
         return this;
+      }
+
+      @Override
+      public TypeToken<? extends TimeSeriesDataType> type() {
+        // TODO Auto-generated method stub
+        return null;
       }
       
     }

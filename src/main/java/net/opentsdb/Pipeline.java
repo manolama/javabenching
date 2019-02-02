@@ -61,6 +61,8 @@ public class Pipeline {
     //net.opentsdb.pipeline7.PipelineBenchmark.iteratorsWithStringIds(null);
     //net.opentsdb.pipeline8.PipelineBenchmark.iteratorsWithDownsampledData(null);
     //net.opentsdb.pipeline9.PipelineBenchmark.iteratorsWithLazyInstantiationAndDownsampling(null);
-    net.opentsdb.pipeline10.PipelineBenchmark.iteratorsWithTSContainer(null);
+    //net.opentsdb.pipeline10.PipelineBenchmark.iteratorsWithTSContainer(null);
+    net.opentsdb.pipeline11.PipelineBenchmark.iteratorsWithTSContainer(null);
   }
+  
 }

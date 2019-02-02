@@ -18,8 +18,8 @@
     <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <jmh.version>1.19</jmh.version>
-      <opentsdb.common.version>3.0.83-SNAPSHOT</opentsdb.common.version>
-      <opentsdb.core.version>3.0.83-SNAPSHOT</opentsdb.core.version>
+      <opentsdb.common.version>3.0.86-SNAPSHOT</opentsdb.common.version>
+      <opentsdb.core.version>3.0.86-SNAPSHOT</opentsdb.core.version>
       <javac.target>1.8</javac.target>
       <uberjar.name>benchmarks</uberjar.name>
       <protobuf.version>3.0.0-beta-2</protobuf.version>
@@ -239,19 +239,6 @@
   </executions>
 </plugin>
 
-
-<plugin>
-    <artifactId>maven-dependency-plugin</artifactId>
-    <version>2.5.1</version>
-    <executions>
-        <execution>
-            <id>getClasspathFilenames</id>
-            <goals>
-                <goal>properties</goal>
-            </goals>
-        </execution>
-     </executions>
-</plugin>
       </plugins>
     </build>
     
@@ -277,22 +264,6 @@
           <groupId>net.opentsdb</groupId>
           <artifactId>opentsdb-core</artifactId>
           <version>${opentsdb.core.version}</version>
-        </dependency>
-        
-                        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>2.7.9</version>
-        </dependency>
-                <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>2.7.9</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.7.9</version>
         </dependency>
         
         <dependency>
@@ -457,6 +428,12 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>1.0.13</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.jocl</groupId>
+      <artifactId>jocl</artifactId>
+      <version>2.0.0</version>
     </dependency>
     </dependencies>
 

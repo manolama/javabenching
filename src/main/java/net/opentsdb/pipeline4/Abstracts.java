@@ -16,22 +16,22 @@ package net.opentsdb.pipeline4;
 
 import java.util.Iterator;
 import net.opentsdb.data.TimeSeriesDataType;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.pipeline4.Interfaces.*;
 
 public class Abstracts {
 
   public static abstract class BaseTS<T extends TimeSeriesDataType> implements TS<T> {
     protected byte[] dps;
-    protected TimeSeriesId id;
+    protected TimeSeriesStringId id;
     
     
-    public BaseTS(final TimeSeriesId id) {
+    public BaseTS(final TimeSeriesStringId id) {
       this.id = id;
     }
     
     @Override
-    public TimeSeriesId id() {
+    public TimeSeriesStringId id() {
       return id;
     }
     

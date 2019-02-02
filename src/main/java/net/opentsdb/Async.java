@@ -180,7 +180,7 @@ public class Async {
       SettableFuture<Double> f = SettableFuture.<Double>create();
       f.set(v);
       
-      String result = Futures.transform(Futures.transformAsync(f, new DoubleUp()), new ToString()).get();
+      String result = Futures.transformAsync(Futures.transformAsync(f, new DoubleUp()), new ToString()).get();
       if (blackHole == null) {
         System.out.println(result);
       } else {

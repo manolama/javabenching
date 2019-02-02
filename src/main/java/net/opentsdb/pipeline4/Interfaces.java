@@ -21,7 +21,7 @@ import java.util.List;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.TimeSeriesDataType;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeStamp;
 
 public class Interfaces {
@@ -43,7 +43,7 @@ public class Interfaces {
   }
   
   public interface TS<T extends TimeSeriesDataType> {
-    public TimeSeriesId id();
+    public TimeSeriesStringId id();
     public Iterator<TSValue<T>> iterator();
     public TypeToken<T> type();
     public void close(); // release resources

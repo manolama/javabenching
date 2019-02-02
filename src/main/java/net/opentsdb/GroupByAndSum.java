@@ -47,8 +47,8 @@ import com.stumbleupon.async.Deferred;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 import net.opentsdb.data.MergedTimeSeriesId;
-import net.opentsdb.data.BaseTimeSeriesId;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.BaseTimeSeriesStringId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.utils.Bytes;
 
 /**
@@ -114,7 +114,7 @@ public class GroupByAndSum {
                 TreeMap::new, // otherwise we lose sort order....
                 Collectors.summingDouble(DP::getV)))
             .entrySet().stream()
-              .collect(() -> new TS(id.build()), 
+              .collect(() -> new TS((TimeSeriesStringId) id.build()), 
                   (ts, dp) -> { ts.addDp(dp.getKey(), dp.getValue()); }, 
                   (ts1, ts2) -> { /*System.out.println("COMBINING...");*/ });
           
@@ -147,7 +147,7 @@ public class GroupByAndSum {
                 TreeMap::new, // otherwise we lose sort order....
                 Collectors.summingDouble(DP::getV)))
             .entrySet().stream()
-              .collect(() -> new TS(id.build()), 
+              .collect(() -> new TS((TimeSeriesStringId) id.build()), 
                   (ts, dp) -> { ts.addDp(dp.getKey(), dp.getValue()); }, 
                   (ts1, ts2) -> { /*System.out.println("COMBINING...");*/ });
           
@@ -178,7 +178,7 @@ public class GroupByAndSum {
         its[x++] = t.iterator();
       }
       
-      TS times = new TS(id.build());
+      TS times = new TS((TimeSeriesStringId) id.build());
       double[] vals = new double[l.size()];
       while (its[0].hasNext()) {
         DP dp = its[0].next();
@@ -242,7 +242,7 @@ public class GroupByAndSum {
           its[x++] = t.iterator();
         }
         
-        TS times = new TS(id.build());
+        TS times = new TS((TimeSeriesStringId) id.build());
         double[] vals = new double[series.size()];
         while (its[0].hasNext()) {
           DP dp = its[0].next();
@@ -303,7 +303,7 @@ public class GroupByAndSum {
         .collect(() -> new TS(), (newts, e) -> {
           newts.addDp(e.getKey(), e.getValue());
         })
-        .doAfterSuccess(t -> t.id = id.build());
+        .doAfterSuccess(t -> t.id = (TimeSeriesStringId) id.build());
       });
     })
     .collect(ArrayList<TS>::new, (list, ts) -> { ts.subscribe(s -> { s.subscribe(v -> { list.add(v); } ); }); })
@@ -338,7 +338,7 @@ public class GroupByAndSum {
         .collect(() -> new TS(), (newts, e) -> {
           newts.addDp(e.getKey(), e.getValue());
         })
-        .doAfterSuccess(t -> t.id = id.build());
+        .doAfterSuccess(t -> t.id = (TimeSeriesStringId) id.build());
       });
     })
     .collect(ArrayList<TS>::new, (list, ts) -> { ts.subscribe(s -> { s.subscribe(v -> { list.add(v); } ); }); })
@@ -354,7 +354,7 @@ public class GroupByAndSum {
   }
   
   static class TS implements Iterable<DP> {
-    TimeSeriesId id;
+    TimeSeriesStringId id;
     byte[] data;
     int write_idx = 0;
     
@@ -362,13 +362,13 @@ public class GroupByAndSum {
       data = new byte[16];
     }
     
-    public TS(TimeSeriesId id) {
+    public TS(TimeSeriesStringId id) {
       this.id = id;
       data = new byte[16];
     }
     
     public TS(final long ts, final int count, String tagv) {
-      id = BaseTimeSeriesId.newBuilder()
+      id = BaseTimeSeriesStringId.newBuilder()
           .setMetric("Metric1")
           .addTags("tagk", tagv)
           .build();

@@ -17,7 +17,7 @@ package net.opentsdb.pipeline3;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.common.Const;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline3.Abstracts.*;
 import net.opentsdb.utils.Bytes;
@@ -29,7 +29,7 @@ public class Implementations {
     long[] integers;
     double[] doubles;
     
-    public MyNumeric(TimeSeriesId id) {
+    public MyNumeric(TimeSeriesStringId id) {
       this.id = id;
     }
     
@@ -92,7 +92,7 @@ public class Implementations {
     long[] timestamps;
     String[] strings;
     
-    public MyString(TimeSeriesId id) {
+    public MyString(TimeSeriesStringId id) {
       this.id = id;
     }
     

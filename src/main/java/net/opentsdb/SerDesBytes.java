@@ -32,8 +32,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
 import net.opentsdb.timeseries.Capnp;
-import net.opentsdb.timeseries.Pbuf;
-import net.opentsdb.timeseries.TSAvro;
+//import net.opentsdb.timeseries.Pbuf;
+//import net.opentsdb.timeseries.TSAvro;
 import net.opentsdb.timeseries.TSJson;
 import net.opentsdb.timeseries.TSThrift;
 import net.opentsdb.timeseries.TimeSeriesBench;
@@ -100,22 +100,22 @@ public class SerDesBytes {
     }
   }
   
-  @Benchmark
-  public static void runProtoBuf(Context context, Counters ctrs, Blackhole blackHole) {
-    int idx = 0;
-    
-    for (int i = 0; i < TIMESERIES; i++) {
-      Pbuf bench = new Pbuf();
-      idx = serialize(context, bench, idx, i);
-      
-      byte[] serialized = bench.getBytes();
-      setCtrs(ctrs, serialized);
-      compress(ctrs, serialized);
-      
-      bench = new Pbuf(serialized);
-      bench.consume(blackHole);
-    }
-  }
+//  @Benchmark
+//  public static void runProtoBuf(Context context, Counters ctrs, Blackhole blackHole) {
+//    int idx = 0;
+//    
+//    for (int i = 0; i < TIMESERIES; i++) {
+//      Pbuf bench = new Pbuf();
+//      idx = serialize(context, bench, idx, i);
+//      
+//      byte[] serialized = bench.getBytes();
+//      setCtrs(ctrs, serialized);
+//      compress(ctrs, serialized);
+//      
+//      bench = new Pbuf(serialized);
+//      bench.consume(blackHole);
+//    }
+//  }
 
   @Benchmark
   public static void runThrift(Context context, Counters ctrs, Blackhole blackHole) {
@@ -151,23 +151,23 @@ public class SerDesBytes {
 //    }
 //  }
   
-  @Benchmark
-  public static void runAvro(Context context, Counters ctrs, Blackhole blackHole) {
-    int idx = 0;
-    
-    for (int i = 0; i < TIMESERIES; i++) {
-      TSAvro bench = new TSAvro();
-      idx = serialize(context, bench, idx, i);
-      
-      byte[] serialized = bench.getBytes();
-      setCtrs(ctrs, serialized);
-      compress(ctrs, serialized);
-      
-      bench = new TSAvro(serialized);
-      bench.consume(blackHole);
-    }
-  }
-  
+//  @Benchmark
+//  public static void runAvro(Context context, Counters ctrs, Blackhole blackHole) {
+//    int idx = 0;
+//    
+//    for (int i = 0; i < TIMESERIES; i++) {
+//      TSAvro bench = new TSAvro();
+//      idx = serialize(context, bench, idx, i);
+//      
+//      byte[] serialized = bench.getBytes();
+//      setCtrs(ctrs, serialized);
+//      compress(ctrs, serialized);
+//      
+//      bench = new TSAvro(serialized);
+//      bench.consume(blackHole);
+//    }
+//  }
+//  
   @Benchmark
   public static void runJson(Context context, Counters ctrs, Blackhole blackHole) {
     int idx = 0;

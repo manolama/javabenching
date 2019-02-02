@@ -20,7 +20,7 @@ import java.util.Iterator;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.TimeSeriesDataType;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeSeriesValue;
 
 public class Interfaces {
@@ -47,7 +47,7 @@ public class Interfaces {
   
   /** Time series interface */
   public interface TS<T extends TimeSeriesDataType> {
-    public TimeSeriesId id();
+    public TimeSeriesStringId id();
     public Iterator<TimeSeriesValue<T>> iterator();
     public TypeToken<T> type();
   }

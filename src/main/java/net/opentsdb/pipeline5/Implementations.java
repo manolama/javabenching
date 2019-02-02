@@ -25,6 +25,7 @@ import com.google.common.reflect.TypeToken;
 import avro.shaded.com.google.common.collect.Lists;
 import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
+import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.pipeline5.Abstracts.*;
 import net.opentsdb.pipeline5.Interfaces.*;
@@ -287,6 +288,12 @@ public class Implementations {
       public NType value() {
         return this;
       }
+
+      @Override
+      public TypeToken<? extends TimeSeriesDataType> type() {
+        // TODO Auto-generated method stub
+        return null;
+      }
       
     }
   }
@@ -341,6 +348,12 @@ public class Implementations {
       @Override
       public StringType value() {
         return this;
+      }
+
+      @Override
+      public TypeToken<? extends TimeSeriesDataType> type() {
+        // TODO Auto-generated method stub
+        return null;
       }
       
     }

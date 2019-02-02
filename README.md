@@ -25,6 +25,19 @@ OpenTSDB 3.x's new query pipeline must be as performant yet flexible as possible
 
 The important bits here are that the functions must be compossible (arranged in any order), support caching and multi-pass operations, and offer an API that's easy for developers to work with.
 
+For each pipeline, the following list describes the type of value returned in a time series object.
+
+1. Iterative over data complex data points.
+2. List of complex data points.
+3. Array of values within complex data.
+4. Iterative over data complex data points.
+5. Iterative over data complex data points.
+6. Iterative over data complex data points.
+7. Iterative over data complex data points.
+8. Iterative over data complex data points.
+9. Iterative over data complex data points.
+10. Iterative over data complex data points.
+
 ## SerDes
 
 I want to provide a compressible and memory efficient serialization framework for passing messages between TSDs and other components. Therefore I look at multi-language compatible serialization frameworks including Thrift, ProtoBuf, Capnp, Flatbuffers, Avro and JSON. 

@@ -28,8 +28,9 @@ import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.MillisecondTimeStamp;
+import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeStamp;
-import net.opentsdb.data.TimeStamp.RelationalOperator;
+import net.opentsdb.data.TimeStamp.Op;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline9.TimeSortedDataStore;
 import net.opentsdb.pipeline9.Implementations.*;
@@ -177,7 +178,7 @@ public class Functions {
           current_ts.update(next_ts);
           
           next.timeSpec().updateTimestamp(ts_idx++, ts);
-          if (ts.compare(RelationalOperator.NE, current_ts)) {
+          if (ts.compare(Op.NE, current_ts)) {
             current_value = -1; // would be a nan or fill
             current_ts.update(ts);
           } else {
@@ -223,6 +224,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
       }
       
@@ -473,6 +480,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
       }
       
@@ -726,6 +739,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
 
       }
@@ -997,6 +1016,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
 
       }

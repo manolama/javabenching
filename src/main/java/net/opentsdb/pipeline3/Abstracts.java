@@ -17,14 +17,14 @@ package net.opentsdb.pipeline3;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.TimeSeriesDataType;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline3.Interfaces.*;
 
 public class Abstracts {
 
   public static abstract class NumericTSDataType implements TS<NumericType> {
-    protected TimeSeriesId id;
+    protected TimeSeriesStringId id;
     protected byte[] data;
     protected int dps;
     protected boolean is_integers = false;
@@ -40,7 +40,7 @@ public class Abstracts {
     public abstract long[] integers();
     public abstract double[] doubles();
     public abstract boolean isIntegers();
-    public TimeSeriesId id() {
+    public TimeSeriesStringId id() {
       return id;
     }
     protected abstract void reset();
@@ -48,7 +48,7 @@ public class Abstracts {
   
   
   public static abstract class StringTSDataType implements TS<StringType> {
-    protected TimeSeriesId id;
+    protected TimeSeriesStringId id;
     protected byte[] data;
     protected int dps;
     
@@ -60,7 +60,7 @@ public class Abstracts {
     
     public abstract long[] timestamps();
     public abstract String[] strings();
-    public TimeSeriesId id() {
+    public TimeSeriesStringId id() {
       return id;
     }
     protected abstract void reset();

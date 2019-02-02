@@ -22,10 +22,11 @@ import com.google.common.reflect.TypeToken;
 import avro.shaded.com.google.common.collect.Lists;
 import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.data.types.numeric.MutableNumericType;
+import net.opentsdb.data.types.numeric.MutableNumericValue;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.Abstracts.*;
 import net.opentsdb.utils.Bytes;
@@ -34,11 +35,11 @@ public class Implementations {
 
   public static class ArrayBackedLongTS extends MyTS<NumericType> implements Iterator<TimeSeriesValue<NumericType>> {
     TimeStamp ts = new MillisecondTimeStamp(0);
-    MutableNumericType dp;
+    MutableNumericValue dp;
     
-    public ArrayBackedLongTS(final TimeSeriesId id) {
+    public ArrayBackedLongTS(final TimeSeriesStringId id) {
       super(id);
-      dp = new MutableNumericType();
+      dp = new MutableNumericValue();
     }
     
     @Override
@@ -70,7 +71,7 @@ public class Implementations {
     TimeStamp ts = new MillisecondTimeStamp(0);
     MutableStringType dp;
     
-    public ArrayBackedStringTS(TimeSeriesId id) {
+    public ArrayBackedStringTS(TimeSeriesStringId id) {
       super(id);
       dp = new MutableStringType();
     }

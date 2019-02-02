@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.pipeline.BaseTimeSortedDataStore;
 import net.opentsdb.pipeline3.Interfaces.*;
 import net.opentsdb.pipeline3.Abstracts.*;
@@ -45,8 +45,8 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
     long ts;
     QueryMode mode;
     
-    Map<TimeSeriesId, TS<?>> num_map = Maps.newHashMap();
-    Map<TimeSeriesId, TS<?>> string_map = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> num_map = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> string_map = Maps.newHashMap();
     Results results = new Results(num_map, string_map);
     
     public MyExecution(boolean reverse_chunks, QueryMode mode) {
@@ -62,8 +62,8 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
         return;
       }
       
-      Map<TimeSeriesId, byte[]> nums = getChunk(DataType.NUMBERS, ts, reverse_chunks);
-      for (Entry<TimeSeriesId, byte[]> entry : nums.entrySet()) {
+      Map<TimeSeriesStringId, byte[]> nums = getChunk(DataType.NUMBERS, ts, reverse_chunks);
+      for (Entry<TimeSeriesStringId, byte[]> entry : nums.entrySet()) {
         TS<?> t = num_map.get(entry.getKey());
         if (t == null) {
           t = new MyNumeric(entry.getKey());
@@ -73,8 +73,8 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
       }
       
       if (with_strings) {
-        Map<TimeSeriesId, byte[]> strings = getChunk(DataType.STRINGS, ts, reverse_chunks);
-        for (Entry<TimeSeriesId, byte[]> entry : strings.entrySet()) {
+        Map<TimeSeriesStringId, byte[]> strings = getChunk(DataType.STRINGS, ts, reverse_chunks);
+        for (Entry<TimeSeriesStringId, byte[]> entry : strings.entrySet()) {
           TS<?> t = string_map.get(entry.getKey());
           if (t == null) {
             t = new MyString(entry.getKey());
@@ -153,10 +153,10 @@ public class TimeSortedDataStore extends BaseTimeSortedDataStore {
   
   public static class Results implements QResult {
 
-    Map<TimeSeriesId, TS<?>> num_map;
-    Map<TimeSeriesId, TS<?>> string_map;
+    Map<TimeSeriesStringId, TS<?>> num_map;
+    Map<TimeSeriesStringId, TS<?>> string_map;
     
-    public Results(Map<TimeSeriesId, TS<?>> num_map, Map<TimeSeriesId, TS<?>> string_map) {
+    public Results(Map<TimeSeriesStringId, TS<?>> num_map, Map<TimeSeriesStringId, TS<?>> string_map) {
       this.num_map = num_map;
       this.string_map = string_map;
     }

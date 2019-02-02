@@ -27,10 +27,11 @@ import avro.shaded.com.google.common.collect.Lists;
 import avro.shaded.com.google.common.collect.Maps;
 import avro.shaded.com.google.common.collect.Sets;
 import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.BaseTimeSeriesId;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.BaseTimeSeriesStringId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.types.numeric.MutableNumericType;
+import net.opentsdb.data.types.numeric.MutableNumericValue;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline.TimeSortedDataStore;
 import net.opentsdb.pipeline2.Abstracts.StringType;
@@ -44,7 +45,7 @@ public class Functions {
   public static class FilterNumsByString implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
     
     protected FilterNumsByString() { }
     
@@ -132,7 +133,7 @@ public class Functions {
       }
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return number == null ? string.id() : number.id();
       }
 
@@ -161,11 +162,11 @@ public class Functions {
   public static class GroupBy implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
     GroupBy parent;
     boolean cache = false;
-    List<Map<TimeSeriesId, byte[]>> local_cache = Lists.newArrayList();
+    List<Map<TimeSeriesStringId, byte[]>> local_cache = Lists.newArrayList();
     int cache_idx = 0;
     
     protected GroupBy() { }
@@ -196,8 +197,8 @@ public class Functions {
         
         // work from cache.
         // TODO - fall through in case the cache has been exhausted. That'll get ugly.
-        Map<TimeSeriesId, byte[]> chunk = local_cache.get(cache_idx++);
-        for (Entry<TimeSeriesId, byte[]> entry : chunk.entrySet()) {
+        Map<TimeSeriesStringId, byte[]> chunk = local_cache.get(cache_idx++);
+        for (Entry<TimeSeriesStringId, byte[]> entry : chunk.entrySet()) {
           LocalNumericTS extant = (LocalNumericTS) time_series.get(entry.getKey());
           if (extant == null) {
             extant = new LocalNumericTS(entry.getKey());
@@ -256,7 +257,7 @@ public class Functions {
         }
         
         // naive group by on the host tag.
-        TimeSeriesId id = BaseTimeSeriesId.newBuilder()
+        TimeSeriesStringId id = BaseTimeSeriesStringId.newBuilder()
             .setMetric(ts.id().metric())
             .addTags("host", ts.id().tags().get("host"))
             .addAggregatedTag("dc")
@@ -278,19 +279,19 @@ public class Functions {
     }
     
     class GBIterator implements TS<NumericType> {
-      TimeSeriesId id;
+      TimeSeriesStringId id;
       List<TS<NumericType>> sources;
       byte[] data = cache ? new byte[TimeSortedDataStore.INTERVALS_PER_CHUNK * 16] : null;
       int cache_idx = 0;
       long next_ts = Long.MAX_VALUE;
       
-      public GBIterator(TimeSeriesId id) {
+      public GBIterator(TimeSeriesStringId id) {
         this.id = id;
         sources = Lists.newArrayList();
       }
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return id;
       }
 
@@ -335,7 +336,7 @@ public class Functions {
           if (initial) {
             initial = false;
           } else {
-            output.add(new MutableNumericType(new MillisecondTimeStamp(last_ts), sum));
+            output.add(new MutableNumericValue(new MillisecondTimeStamp(last_ts), sum));
             if (cache) {
               System.arraycopy(Bytes.fromLong(last_ts), 0, data, cache_idx, 8);
               cache_idx += 8;
@@ -347,7 +348,7 @@ public class Functions {
           
           if (!has_next) {
             if (cache) {
-              Map<TimeSeriesId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
+              Map<TimeSeriesStringId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
               c.put(id, Arrays.copyOf(data, cache_idx));
             }
             break;
@@ -368,8 +369,8 @@ public class Functions {
   public static class DiffFromStdD implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
-    Map<TimeSeriesId, Pair<Long, Double>> sums = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, Pair<Long, Double>> sums = Maps.newHashMap();
     boolean initialized = false;
     
     public DiffFromStdD(QExecutionPipeline downstream_execution) {
@@ -453,7 +454,7 @@ public class Functions {
       double stdev;
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return source.id();
       }
 
@@ -466,7 +467,7 @@ public class Functions {
       public List<TimeSeriesValue<NumericType>> data() {
         List<TimeSeriesValue<NumericType>> new_values = Lists.newArrayListWithCapacity(source.data().size());
         for (final TimeSeriesValue<NumericType> dp : source.data()) {
-          new_values.add(new MutableNumericType(dp.timestamp(), stdev - dp.value().toDouble()));
+          new_values.add(new MutableNumericValue(dp.timestamp(), stdev - dp.value().toDouble()));
         }
         return new_values;
       }
@@ -479,7 +480,7 @@ public class Functions {
       @Override
       public void onComplete() {
         // setup the new iterators
-        for (Entry<TimeSeriesId, Pair<Long, Double>> series : sums.entrySet()) {
+        for (Entry<TimeSeriesStringId, Pair<Long, Double>> series : sums.entrySet()) {
           SIt it = new SIt();
           it.stdev = Math.sqrt((series.getValue().getValue() / (double)series.getValue().getKey()));
           // PURPOSELY not setting the source here.
@@ -525,7 +526,7 @@ public class Functions {
   public static class ExpressionProc implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
     
     public ExpressionProc(QExecutionPipeline downstream_execution) {
       this.upstream = downstream_execution.getListener();
@@ -583,7 +584,7 @@ public class Functions {
           continue;
         }
         
-        BaseTimeSeriesId.Builder builder = BaseTimeSeriesId.newBuilder()
+        BaseTimeSeriesStringId.Builder builder = BaseTimeSeriesStringId.newBuilder()
             .setMetric("Sum of if in and out");
         for (Entry<String, String> pair : ts.id().tags().entrySet()) {
           builder.addTags(pair.getKey(), pair.getValue());
@@ -609,9 +610,9 @@ public class Functions {
     
     class ExpressionIterator implements TS<NumericType> {
       Map<String, TS<?>> series = Maps.newHashMap();
-      TimeSeriesId id;
+      TimeSeriesStringId id;
       
-      public ExpressionIterator(TimeSeriesId id) {
+      public ExpressionIterator(TimeSeriesStringId id) {
         this.id = id;
       }
       
@@ -624,7 +625,7 @@ public class Functions {
       }
 
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return id;
       }
       
@@ -642,7 +643,7 @@ public class Functions {
             TS<NumericType> s = (TS<NumericType>) series;
             sum += s.data().get(i).value().toDouble();
           }
-          output.add(new MutableNumericType(series.get("sys.if.out").data().get(i).timestamp(), sum));
+          output.add(new MutableNumericValue(series.get("sys.if.out").data().get(i).timestamp(), sum));
         }
         return output;
       }

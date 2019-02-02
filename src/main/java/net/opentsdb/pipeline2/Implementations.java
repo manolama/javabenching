@@ -21,10 +21,11 @@ import com.google.common.reflect.TypeToken;
 import avro.shaded.com.google.common.collect.Lists;
 import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.data.types.numeric.MutableNumericType;
+import net.opentsdb.data.types.numeric.MutableNumericValue;
 import net.opentsdb.data.types.numeric.NumericType;
 import net.opentsdb.pipeline2.Abstracts.*;
 import net.opentsdb.utils.Bytes;
@@ -33,7 +34,7 @@ public class Implementations {
 
   public static class LocalNumericTS extends MyTS<NumericType> {
 
-    public LocalNumericTS(TimeSeriesId id) {
+    public LocalNumericTS(TimeSeriesStringId id) {
       super(id);
     }
 
@@ -49,7 +50,7 @@ public class Implementations {
       while (idx < dps.length) {
         TimeStamp ts = new MillisecondTimeStamp(Bytes.getLong(dps, idx));
         idx += 8;
-        results.add(new MutableNumericType(ts, Bytes.getLong(dps, idx)));
+        results.add(new MutableNumericValue(ts, Bytes.getLong(dps, idx)));
         idx += 8;
       }
       return results;
@@ -59,7 +60,7 @@ public class Implementations {
   
   public static class ArrayBackedStringTS extends MyTS<StringType> {
 
-    public ArrayBackedStringTS(TimeSeriesId id) {
+    public ArrayBackedStringTS(TimeSeriesStringId id) {
       super(id);
     }
 

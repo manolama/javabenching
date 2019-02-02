@@ -23,8 +23,8 @@ import com.google.common.collect.Lists;
 
 import avro.shaded.com.google.common.collect.Maps;
 import net.opentsdb.common.Const;
-import net.opentsdb.data.BaseTimeSeriesId;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.BaseTimeSeriesStringId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.utils.Bytes;
 
 /**
@@ -46,7 +46,7 @@ public abstract class BaseTimeSortedDataStore {
   }
   
   public ExecutorService pool = Executors.newFixedThreadPool(1);
-  public List<TimeSeriesId> timeseries;
+  public List<TimeSeriesStringId> timeseries;
   public long start_ts = 0; // in ms
   public boolean with_strings;
   
@@ -57,7 +57,7 @@ public abstract class BaseTimeSortedDataStore {
     for (final String metric : METRICS) {
       for (final String dc : DATACENTERS) {
         for (int h = 0; h < HOSTS; h++) {
-          TimeSeriesId id = BaseTimeSeriesId.newBuilder()
+          TimeSeriesStringId id = BaseTimeSeriesStringId.newBuilder()
               .setMetric(metric)
               .addTags("dc", dc)
               .addTags("host", String.format("web%02d", h + 1))
@@ -76,7 +76,7 @@ public abstract class BaseTimeSortedDataStore {
    * @param reverse Whether or not we're walking down or up.
    * @return An "encoded" byte array.
    */
-  public Map<TimeSeriesId, byte[]> getChunk(DataType type, long ts, boolean reverse) {
+  public Map<TimeSeriesStringId, byte[]> getChunk(DataType type, long ts, boolean reverse) {
     switch (type) {
     case NUMBERS:
       return getNumbersChunk(ts, reverse);
@@ -87,8 +87,8 @@ public abstract class BaseTimeSortedDataStore {
     }
   }
   
-  Map<TimeSeriesId, byte[]> getNumbersChunk(long ts, boolean reverse) {
-    Map<TimeSeriesId, byte[]> results = Maps.newHashMap();
+  Map<TimeSeriesStringId, byte[]> getNumbersChunk(long ts, boolean reverse) {
+    Map<TimeSeriesStringId, byte[]> results = Maps.newHashMap();
     for (int x = 0; x < timeseries.size(); x++) {
       if ("sys.if.out".equals(timeseries.get(x).metric()) && 
           "sys.if.in".equals(timeseries.get(x).metric())) {
@@ -123,8 +123,8 @@ public abstract class BaseTimeSortedDataStore {
     return results;
   }
   
-  Map<TimeSeriesId, byte[]> getStringsChunk(long ts, boolean reverse) {
-    Map<TimeSeriesId, byte[]> results = Maps.newHashMap();
+  Map<TimeSeriesStringId, byte[]> getStringsChunk(long ts, boolean reverse) {
+    Map<TimeSeriesStringId, byte[]> results = Maps.newHashMap();
     for (int x = 0; x < timeseries.size(); x++) {
       if ("sys.if.out".equals(timeseries.get(x).metric()) && 
           "sys.if.in".equals(timeseries.get(x).metric())) {

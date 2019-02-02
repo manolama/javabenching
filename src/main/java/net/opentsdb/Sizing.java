@@ -31,43 +31,46 @@ import com.stumbleupon.async.Deferred;
 public class Sizing {
 
   public static void main(final String[] args) {
-    System.out.println(VM.current().details());
-    
-    System.out.println(ClassLayout.parseClass(byte.class).toPrintable());
-    System.out.println(ClassLayout.parseClass(short.class).toPrintable());
-    System.out.println(ClassLayout.parseClass(int.class).toPrintable());
-    System.out.println(ClassLayout.parseClass(long.class).toPrintable());
-    
-    //System.out.println(ClassLayout.parseClass(Future.class).toPrintable());
-    //System.out.println(ClassLayout.parseClass(ListenableFuture.class).toPrintable());
-//    System.out.println(ClassLayout.parseClass(Deferred.class).toPrintable());
-//    System.out.println(ClassLayout.parseClass(Callback.class).toPrintable());
-//    System.out.println(ClassLayout.parseClass(CompletableFuture.class).toPrintable());
-//    System.out.println(ClassLayout.parseClass(CompletionStage.class).toPrintable());
-    
-    System.out.println("********** ZONED DATE TIME ************");
-    System.out.println(ClassLayout.parseClass(ZonedDateTime.class).toPrintable());
-    
-    ZonedDateTime zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of("UTC"));
-    System.out.println(ClassLayout.parseInstance(zdt).toPrintable());
-    if (true) {
-      return;
-    }
-    final Deferred<Object> deferred = new Deferred<Object>();
-    final CompletableFuture<Object> cf = new CompletableFuture<Object>();
-    
-    System.out.println(ClassLayout.parseInstance(deferred).toPrintable());
-    System.out.println(ClassLayout.parseInstance(cf).toPrintable());
-   
+//    System.out.println(VM.current().details());
+//    
+//    System.out.println(ClassLayout.parseClass(byte.class).toPrintable());
+//    System.out.println(ClassLayout.parseClass(short.class).toPrintable());
+//    System.out.println(ClassLayout.parseClass(int.class).toPrintable());
+//    System.out.println(ClassLayout.parseClass(long.class).toPrintable());
+//    
+//    //System.out.println(ClassLayout.parseClass(Future.class).toPrintable());
+//    //System.out.println(ClassLayout.parseClass(ListenableFuture.class).toPrintable());
+////    System.out.println(ClassLayout.parseClass(Deferred.class).toPrintable());
+////    System.out.println(ClassLayout.parseClass(Callback.class).toPrintable());
+////    System.out.println(ClassLayout.parseClass(CompletableFuture.class).toPrintable());
+////    System.out.println(ClassLayout.parseClass(CompletionStage.class).toPrintable());
+//    
+//    System.out.println("********** ZONED DATE TIME ************");
+//    System.out.println(ClassLayout.parseClass(ZonedDateTime.class).toPrintable());
+//    
+//    ZonedDateTime zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of("UTC"));
+//    System.out.println(ClassLayout.parseInstance(zdt).toPrintable());
+//    if (true) {
+//      return;
+//    }
+//    final Deferred<Object> deferred = new Deferred<Object>();
+//    final CompletableFuture<Object> cf = new CompletableFuture<Object>();
+//    
+//    System.out.println(ClassLayout.parseInstance(deferred).toPrintable());
+//    System.out.println(ClassLayout.parseInstance(cf).toPrintable());
+//   
     
     class MyCB implements Callback <Object, Object> {
+      int[] arrays;
       @Override
       public Object call(Object arg) throws Exception {
         return null;
       }
     }
-    System.out.println(ClassLayout.parseInstance(new MyCB()).toPrintable());
+    System.out.println(ClassLayout.parseClass(MyCB.class).toPrintable());
     
+    System.out.println("HDR: " + ClassLayout.parseClass(MyCB.class).headerSize());
+    System.out.println("INST: " + ClassLayout.parseClass(MyCB.class).instanceSize());
     
   }
 }

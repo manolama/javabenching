@@ -33,6 +33,7 @@ import avro.shaded.com.google.common.collect.Lists;
 import net.openhft.hashing.LongHashFunction;
 import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
+import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.pipeline10.Abstracts.*;
 import net.opentsdb.pipeline10.Interfaces.*;
@@ -407,6 +408,12 @@ public class Implementations {
       @Override
       public boolean hasNext() {
         return idx < dps.length;
+      }
+
+      @Override
+      public TypeToken<? extends TimeSeriesDataType> type() {
+        // TODO Auto-generated method stub
+        return null;
       }
       
     }

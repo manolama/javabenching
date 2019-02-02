@@ -303,6 +303,12 @@ public class TimeSortedDataStore {
         public NType value() {
           return this;
         }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
         
       }
       
@@ -339,6 +345,12 @@ public class TimeSortedDataStore {
           idx += 3;
           value = new String(s, Const.UTF8_CHARSET);
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
         
       }

@@ -19,22 +19,22 @@ import java.util.List;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.TimeSeriesDataType;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.pipeline.Interfaces.TS;
 
 public class Abstracts {
 
   public static abstract class MyTS<T extends TimeSeriesDataType> implements TS<T> {
     protected byte[] dps;
-    protected TimeSeriesId id;
+    protected TimeSeriesStringId id;
     protected int idx;
     
-    public MyTS(final TimeSeriesId id) {
+    public MyTS(final TimeSeriesStringId id) {
       this.id = id;
     }
     
     @Override
-    public TimeSeriesId id() {
+    public TimeSeriesStringId id() {
       return id;
     }
     

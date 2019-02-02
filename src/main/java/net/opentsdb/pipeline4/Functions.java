@@ -28,8 +28,9 @@ import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.data.MillisecondTimeStamp;
-import net.opentsdb.data.BaseTimeSeriesId;
-import net.opentsdb.data.TimeSeriesId;
+import net.opentsdb.data.TimeSeriesDataType;
+import net.opentsdb.data.BaseTimeSeriesStringId;
+import net.opentsdb.data.TimeSeriesStringId;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.pipeline4.Implementations.ArrayBackedLongTS;
 import net.opentsdb.pipeline4.Interfaces.*;
@@ -41,7 +42,7 @@ public class Functions {
   public static class FilterNumsByString implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
     
     protected FilterNumsByString() { }
     
@@ -205,10 +206,16 @@ public class Functions {
         public NType value() {
           return this;
         }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
       }
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return number == null ? string.id() : number.id();
       }
 
@@ -235,11 +242,11 @@ public class Functions {
   public static class GroupBy implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
     
     GroupBy parent;
     boolean cache = false;
-    List<Map<TimeSeriesId, byte[]>> local_cache = Lists.newArrayList();
+    List<Map<TimeSeriesStringId, byte[]>> local_cache = Lists.newArrayList();
     int cache_idx = 0;
     
     protected GroupBy() { }
@@ -269,7 +276,7 @@ public class Functions {
         }
         
         // naive group by on the host tag.
-        TimeSeriesId id = BaseTimeSeriesId.newBuilder()
+        TimeSeriesStringId id = BaseTimeSeriesStringId.newBuilder()
             .setMetric(ts.id().metric())
             .addTags("host", ts.id().tags().get("host"))
             .addAggregatedTag("dc")
@@ -298,13 +305,13 @@ public class Functions {
     }
 
     class GBIterator implements TS<NType> {
-      TimeSeriesId id;
+      TimeSeriesStringId id;
       List<TS<NType>> sources;
       
       byte[] data = cache ? new byte[TimeSortedDataStore.INTERVALS_PER_CHUNK * 16] : null;
       int cache_idx = 0;
             
-      public GBIterator(TimeSeriesId id) {
+      public GBIterator(TimeSeriesStringId id) {
         this.id = id;
         sources = Lists.newArrayList();
       }
@@ -328,7 +335,7 @@ public class Functions {
       }
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return id;
       }
 
@@ -404,7 +411,7 @@ public class Functions {
             System.arraycopy(Bytes.fromLong(sum), 0, data, cache_idx, 8);
             cache_idx += 8;
             if (!has_next) {
-              Map<TimeSeriesId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
+              Map<TimeSeriesStringId, byte[]> c = parent.local_cache.get(parent.local_cache.size() - 1);
               c.put(id, Arrays.copyOf(data, cache_idx));
             }
           }
@@ -453,6 +460,12 @@ public class Functions {
         public NType value() {
           return this;
         }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
       }
       
       @Override
@@ -488,8 +501,8 @@ public class Functions {
         
         // work from cache.
         // TODO - fall through in case the cache has been exhausted. That'll get ugly.
-        Map<TimeSeriesId, byte[]> chunk = local_cache.get(cache_idx++);
-        for (Entry<TimeSeriesId, byte[]> entry : chunk.entrySet()) {
+        Map<TimeSeriesStringId, byte[]> chunk = local_cache.get(cache_idx++);
+        for (Entry<TimeSeriesStringId, byte[]> entry : chunk.entrySet()) {
           ArrayBackedLongTS extant = (ArrayBackedLongTS) time_series.get(entry.getKey());
           if (extant == null) {
             extant = new ArrayBackedLongTS(entry.getKey());
@@ -532,8 +545,8 @@ public class Functions {
   public static class DiffFromStdD implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
-    Map<TimeSeriesId, Pair<Long, Double>> sums = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, Pair<Long, Double>> sums = Maps.newHashMap();
     
     boolean initialized = false;
     
@@ -608,9 +621,9 @@ public class Functions {
 
       TS<NType> source;
       double stdev;
-      TimeSeriesId id;
+      TimeSeriesStringId id;
       
-      public SIt(TimeSeriesId id) {
+      public SIt(TimeSeriesStringId id) {
         this.id = id;
       }
       
@@ -667,10 +680,16 @@ public class Functions {
           return this;
         }
 
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
+
       }
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return id;
       }
 
@@ -698,7 +717,7 @@ public class Functions {
       @Override
       public void onComplete() {
         // setup the new iterators
-        for (Entry<TimeSeriesId, Pair<Long, Double>> series : sums.entrySet()) {
+        for (Entry<TimeSeriesStringId, Pair<Long, Double>> series : sums.entrySet()) {
           SIt it = new SIt(series.getKey());
           it.stdev = Math.sqrt((series.getValue().getValue() / (double)series.getValue().getKey()));
           // PURPOSELY not setting the source here.
@@ -745,7 +764,7 @@ public class Functions {
   public static class ExpressionProc implements TSProcessor, StreamListener, QResult, QExecutionPipeline {
     StreamListener upstream;
     QExecutionPipeline downstream;
-    Map<TimeSeriesId, TS<?>> time_series = Maps.newHashMap();
+    Map<TimeSeriesStringId, TS<?>> time_series = Maps.newHashMap();
     Set<Integer> hashes = Sets.newHashSet();
     
     public ExpressionProc(QExecutionPipeline downstream_execution) {
@@ -808,7 +827,7 @@ public class Functions {
           continue;
         }
         
-        BaseTimeSeriesId.Builder builder = BaseTimeSeriesId.newBuilder()
+        BaseTimeSeriesStringId.Builder builder = BaseTimeSeriesStringId.newBuilder()
             .setMetric("Sum of if in and out");
         for (Entry<String, String> pair : ts.id().tags().entrySet()) {
           builder.addTags(pair.getKey(), pair.getValue());
@@ -834,9 +853,9 @@ public class Functions {
     
     class ExpressionIterator implements TS<NType> {
       Map<String, TS<?>> series = Maps.newHashMap();
-      TimeSeriesId id;
+      TimeSeriesStringId id;
       
-      public ExpressionIterator(TimeSeriesId id) {
+      public ExpressionIterator(TimeSeriesStringId id) {
         this.id = id;
       }
       
@@ -929,10 +948,16 @@ public class Functions {
           return this;
         }
 
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
+
       }
       
       @Override
-      public TimeSeriesId id() {
+      public TimeSeriesStringId id() {
         return id;
       }
 

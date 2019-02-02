@@ -29,6 +29,7 @@ import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.common.Const;
 import net.opentsdb.data.MillisecondTimeStamp;
+import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeStamp;
 import net.opentsdb.pipeline7.TimeSortedDataStore;
 import net.opentsdb.pipeline7.Implementations.*;
@@ -204,6 +205,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
       }
       
@@ -452,6 +459,12 @@ public class Functions {
         public NType value() {
           return this;
         }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
+        }
       }
 
       
@@ -665,6 +678,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
 
       }
@@ -927,6 +946,12 @@ public class Functions {
         @Override
         public NType value() {
           return this;
+        }
+
+        @Override
+        public TypeToken<? extends TimeSeriesDataType> type() {
+          // TODO Auto-generated method stub
+          return null;
         }
 
       }
