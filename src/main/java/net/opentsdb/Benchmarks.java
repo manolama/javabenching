@@ -25,15 +25,23 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import net.opentsdb.utils.DateTime;
+
 public class Benchmarks {
 
   public static void main(String[] args) {
     if (true) {
-      GroupByAndSum.Context ctx = new GroupByAndSum.Context();
-      ctx.setup();
+      long start = DateTime.nanoTime();
+//      GroupByAndSum.Context ctx = new GroupByAndSum.Context();
+//      ctx.setup();
       //GroupByAndSum.runStreamedSerial(ctx, null);
       //GroupByAndSum.runTraditional(ctx, null);
-      GroupByAndSum.runRxParallel(ctx, null);
+      //GroupByAndSum.runRxParallel(ctx, null);
+      ObjectPools.Context ctx = new ObjectPools.Context();
+      ctx.setup();
+      ObjectPools.stormPotPool(ctx, null);
+      ctx.teardown();
+      System.out.println("DONE: " + DateTime.msFromNanoDiff(DateTime.nanoTime(), start));
       return;
     }
     

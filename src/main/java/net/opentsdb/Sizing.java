@@ -69,8 +69,8 @@ public class Sizing {
     }
     System.out.println(ClassLayout.parseClass(MyCB.class).toPrintable());
     
-    System.out.println("HDR: " + ClassLayout.parseClass(MyCB.class).headerSize());
-    System.out.println("INST: " + ClassLayout.parseClass(MyCB.class).instanceSize());
+    System.out.println("HDR: " + ClassLayout.parseClass(double[].class).headerSize());
+    System.out.println("INST: " + ClassLayout.parseClass(double[].class).instanceSize());
     
   }
 }
