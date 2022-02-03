@@ -9,34 +9,34 @@
     <version>0.1</version>
 
     <properties>
-      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-      <jmh.version>1.19</jmh.version>
-      <opentsdb.common.version>3.0.90-SNAPSHOT</opentsdb.common.version>
-      <opentsdb.core.version>3.0.90-SNAPSHOT</opentsdb.core.version>
-      <javac.target>1.8</javac.target>
-      <uberjar.name>benchmarks</uberjar.name>
-      <protobuf.version>3.0.0-beta-2</protobuf.version>
-      <grpc.version>0.14.0</grpc.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jmh.version>1.19</jmh.version>
+        <opentsdb.common.version>3.0.90-SNAPSHOT</opentsdb.common.version>
+        <opentsdb.core.version>3.0.90-SNAPSHOT</opentsdb.core.version>
+        <javac.target>1.8</javac.target>
+        <uberjar.name>benchmarks</uberjar.name>
+        <protobuf.version>3.0.0-beta-2</protobuf.version>
+        <grpc.version>0.14.0</grpc.version>
     </properties>
-    
+
     <build>
-      <extensions>
-        <!-- provides os.detected.classifier (i.e. linux-x86_64, osx-x86_64) property -->
-        <extension>
-          <groupId>kr.motd.maven</groupId>
-          <artifactId>os-maven-plugin</artifactId>
-          <version>1.4.1.Final</version>
-        </extension>
-        
-        <extension>
-          <groupId>org.apache.maven.wagon</groupId>
-          <artifactId>wagon-ssh-external</artifactId>
-          <version>2.8</version>
-        </extension>
-      </extensions>
-    
-      <plugins>
-      <plugin>
+        <extensions>
+            <!-- provides os.detected.classifier (i.e. linux-x86_64, osx-x86_64) property -->
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.4.1.Final</version>
+            </extension>
+
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh-external</artifactId>
+                <version>2.8</version>
+            </extension>
+        </extensions>
+
+        <plugins>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>2.10</version>
@@ -53,10 +53,13 @@
                                     <groupId>com.google.protobuf</groupId>
                                     <artifactId>protoc</artifactId>
                                     <version>${protobuf.version}</version>
-                                    <classifier>${os.detected.classifier}</classifier>
+                                    <classifier>${os.detected.classifier}
+                                    </classifier>
                                     <type>exe</type>
                                     <overWrite>true</overWrite>
-                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                    <outputDirectory>
+                                        ${project.build.directory}
+                                    </outputDirectory>
                                 </artifactItem>
                             </artifactItems>
                             <useJvmChmod>true</useJvmChmod>
@@ -64,22 +67,23 @@
                     </execution>
                 </executions>
             </plugin>
-            
+
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>1.7</version>
                 <executions>
-                     <execution>
-                       <id>protoc-perm</id>
-                       <phase>initialize</phase>
+                    <execution>
+                        <id>protoc-perm</id>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                           <target>
-                              <!-- Dependency plugin discards file permissions so we need to set them back manually -->
-                              <chmod file="${project.build.directory}/protoc-${protobuf.version}-${os.detected.classifier}.exe" perm="ugo+rx" />
-                           </target>
+                            <target>
+                                <!-- Dependency plugin discards file permissions so we need to set them back manually -->
+                                <chmod file="${project.build.directory}/protoc-${protobuf.version}-${os.detected.classifier}.exe"
+                                       perm="ugo+rx"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -90,17 +94,25 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.5.0</version>
                 <configuration>
-                    <protocExecutable>${project.build.directory}/protoc-${protobuf.version}-${os.detected.classifier}.exe</protocExecutable>
+                    <protocExecutable>
+                        ${project.build.directory}/protoc-${protobuf.version}-${os.detected.classifier}.exe
+                    </protocExecutable>
                     <protoSourceRoot>${basedir}/src/proto</protoSourceRoot>
-                    <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+                    <outputDirectory>
+                        ${project.build.directory}/generated-sources
+                    </outputDirectory>
                     <!--
           The version of protoc must match protobuf-java. If you don't depend on
           protobuf-java directly, you will be transitively depending on the
           protobuf-java version that grpc depends on.
         -->
-        <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-        <pluginId>grpc-java</pluginId>
-        <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                    <protocArtifact>
+                        com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                    </protocArtifact>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>
+                        io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}
+                    </pluginArtifact>
                 </configuration>
                 <executions>
                     <execution>
@@ -110,7 +122,7 @@
                             <goal>compile</goal>
                         </goals>
                     </execution>
-                    
+
                     <execution>
                         <id>grpcclasses</id>
                         <phase>generate-sources</phase>
@@ -118,39 +130,39 @@
                             <goal>compile-custom</goal>
                         </goals>
                         <configuration>
-                          <!-- If we leave this as the default, then GRPC will flush the pbuf classes! -->
-                          <clearOutputDirectory>false</clearOutputDirectory>
+                            <!-- If we leave this as the default, then GRPC will flush the pbuf classes! -->
+                            <clearOutputDirectory>false</clearOutputDirectory>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-      
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.6.1</version>
-          <configuration>
-            <compilerVersion>${javac.target}</compilerVersion>
-            <source>${javac.target}</source>
-            <target>${javac.target}</target>
-          </configuration>
-        </plugin>
-        
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>exec-maven-plugin</artifactId>
-          <version>1.4.0</version>
-          <configuration>
-            <executable>java</executable>
-            <arguments>
-              <argument>-classpath</argument>
-              <classpath />
-              <argument>net.opentsdb.Benchmarks</argument>
-            </arguments>
-          </configuration>
-        </plugin>
-        
-        <plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
+                <configuration>
+                    <compilerVersion>${javac.target}</compilerVersion>
+                    <source>${javac.target}</source>
+                    <target>${javac.target}</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <configuration>
+                    <executable>java</executable>
+                    <arguments>
+                        <argument>-classpath</argument>
+                        <classpath/>
+                        <argument>net.opentsdb.Benchmarks</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>2.2</version>
@@ -163,7 +175,8 @@
                         <configuration>
                             <finalName>${uberjar.name}</finalName>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.openjdk.jmh.Main</mainClass>
                                 </transformer>
                             </transformers>
@@ -185,80 +198,101 @@
                     </execution>
                 </executions>
             </plugin>
-        
-        <!--<plugin>
-        <groupId>org.apache.thrift.tools</groupId>
-        <artifactId>maven-thrift-plugin</artifactId>
-        <version>0.1.11</version>
-        <configuration>
-            <thriftExecutable>/usr/local/bin/thrift</thriftExecutable>
-            <generator>java</generator>
-            <outputDirectory>${project.build.directory}/generated-sources/</outputDirectory>
-            <temporaryThriftFileDirectory>${project.build.directory}/tmp/</temporaryThriftFileDirectory>
-        </configuration>
-        <executions>
-            <execution>
-                <id>thrift-sources</id>
-                <phase>generate-sources</phase>
-                <goals>
-                    <goal>compile</goal>
-                </goals>
-            </execution>
-            <execution>
-                <id>thrift-test-sources</id>
-                <phase>generate-test-sources</phase>
-                <goals>
-                    <goal>testCompile</goal>
-                </goals>
-            </execution>
-        </executions>
-    </plugin>-->
-        
-        <plugin>
-  <groupId>org.apache.avro</groupId>
-  <artifactId>avro-maven-plugin</artifactId>
-  <version>1.8.2</version>
-  <executions>
-    <execution>
-      <phase>generate-sources</phase>
-      <goals>
-        <goal>idl-protocol</goal>
-      </goals>
-      <configuration>
-        <sourceDirectory>${project.basedir}/src/main/avro/</sourceDirectory>
-        <outputDirectory>${project.build.directory}/generated-sources/</outputDirectory>
-      </configuration>
-    </execution>
-  </executions>
-</plugin>
 
-      </plugins>
+            <!--<plugin>
+            <groupId>org.apache.thrift.tools</groupId>
+            <artifactId>maven-thrift-plugin</artifactId>
+            <version>0.1.11</version>
+            <configuration>
+                <thriftExecutable>/usr/local/bin/thrift</thriftExecutable>
+                <generator>java</generator>
+                <outputDirectory>${project.build.directory}/generated-sources/</outputDirectory>
+                <temporaryThriftFileDirectory>${project.build.directory}/tmp/</temporaryThriftFileDirectory>
+            </configuration>
+            <executions>
+                <execution>
+                    <id>thrift-sources</id>
+                    <phase>generate-sources</phase>
+                    <goals>
+                        <goal>compile</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>thrift-test-sources</id>
+                    <phase>generate-test-sources</phase>
+                    <goals>
+                        <goal>testCompile</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>-->
+
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>1.8.2</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>idl-protocol</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.basedir}/src/main/avro/
+                            </sourceDirectory>
+                            <outputDirectory>
+                                ${project.build.directory}/generated-sources/
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
     </build>
-    
+
     <repositories>
-
-  <repository>
-
-      <id>org.openspaces</id>
-
-      <url>http://Maven-repository.openspaces.org</url>
-
-  </repository>
-
-</repositories>
+        <repository>
+            <id>org.openspaces</id>
+            <url>http://Maven-repository.openspaces.org</url>
+        </repository>
+        <repository>
+            <id>dependency-snapshots-repo</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <dependencies>
-      <dependency>
-          <groupId>net.opentsdb</groupId>
-          <artifactId>opentsdb-common</artifactId>
-          <version>${opentsdb.common.version}</version>
+        <!-- https://mvnrepository.com/artifact/javax.annotation/javax.annotation-api -->
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.opentsdb</groupId>
+            <artifactId>opentsdb-common</artifactId>
+            <version>${opentsdb.common.version}</version>
         </dependency>
         <dependency>
-          <groupId>net.opentsdb</groupId>
-          <artifactId>opentsdb-core</artifactId>
-          <version>${opentsdb.core.version}</version>
+            <groupId>net.opentsdb</groupId>
+            <artifactId>opentsdb-core</artifactId>
+            <version>${opentsdb.core.version}</version>
         </dependency>
-        
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.7</version>
+        </dependency>
+
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-epoll</artifactId>
@@ -290,156 +324,174 @@
             <artifactId>netty-handler</artifactId>
             <version>4.1.15.Final</version>
         </dependency>
-        
+
         <dependency>
-          <groupId>org.openjdk.jmh</groupId>
-          <artifactId>jmh-core</artifactId>
-          <version>${jmh.version}</version>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${jmh.version}</version>
         </dependency>
         <dependency>
-          <groupId>org.openjdk.jmh</groupId>
-          <artifactId>jmh-generator-annprocess</artifactId>
-          <version>${jmh.version}</version>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${jmh.version}</version>
         </dependency>
         <dependency>
-          <groupId>org.openjdk.jmh</groupId>
-          <artifactId>jmh-samples</artifactId>
-          <version>${jmh.version}</version>
-        </dependency>
-        
-        <dependency>
-          <groupId>it.unimi.dsi</groupId>
-          <artifactId>fastutil</artifactId>
-          <version>8.1.0</version>
-        </dependency>
-        
-        <dependency>
-          <groupId>io.reactivex.rxjava2</groupId>
-          <artifactId>rxjava</artifactId>
-          <version>2.1.3</version>
-        </dependency>
-        
-        <dependency>
-          <groupId>com.google.protobuf</groupId>
-          <artifactId>protobuf-java</artifactId>
-          <version>${protobuf.version}</version>
-        </dependency>
-        
-        <dependency>
-          <groupId>com.google.protobuf</groupId>
-          <artifactId>protobuf-java-util</artifactId>
-          <version>${protobuf.version}</version>
-        </dependency>
-        
-        <dependency>
-          <groupId>org.apache.thrift</groupId>
-          <artifactId>libthrift</artifactId>
-          <version>0.10.0</version>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-samples</artifactId>
+            <version>${jmh.version}</version>
         </dependency>
 
-<dependency>
-  <groupId>com.github.chrisvest</groupId>
-  <artifactId>stormpot</artifactId>
-  <version>2.4.1</version>
-</dependency>
-
-<dependency>
-  <groupId>org.vibur</groupId>
-  <artifactId>vibur-object-pool</artifactId>
-  <version>22.2</version>
-</dependency> 
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil</artifactId>
+            <version>8.1.0</version>
+        </dependency>
 
         <dependency>
-    <groupId>org.openjdk.jol</groupId>
-    <artifactId>jol-core</artifactId>
-    <version>0.8</version>
-</dependency>
-        
+            <groupId>io.reactivex.rxjava2</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>2.1.3</version>
+        </dependency>
+
         <dependency>
-    <groupId>org.capnproto</groupId>
-    <artifactId>runtime</artifactId>
-    <version>0.1.1</version>
-</dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
 
-<dependency>
-    <groupId>com.github.davidmoten</groupId>
-    <artifactId>flatbuffers-java</artifactId>
-    <version>1.7.0.1</version>
-</dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
 
-<dependency>
-  <groupId>org.apache.avro</groupId>
-  <artifactId>avro</artifactId>
-  <version>1.8.2</version>
-</dependency>
+        <dependency>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+            <version>0.10.0</version>
+        </dependency>
 
-<dependency>
-   <groupId>org.redisson</groupId>
-   <artifactId>redisson</artifactId>
-   <version>3.5.1</version>
-</dependency>  
+        <dependency>
+            <groupId>com.github.chrisvest</groupId>
+            <artifactId>stormpot</artifactId>
+            <version>2.4.1</version>
+        </dependency>
 
-<dependency>
-    <groupId>org.apache.ignite</groupId>
-    <artifactId>ignite-core</artifactId>
-    <version>2.1.0</version>
-</dependency>
+        <dependency>
+            <groupId>org.vibur</groupId>
+            <artifactId>vibur-object-pool</artifactId>
+            <version>22.2</version>
+        </dependency>
 
-<dependency>
-    <groupId>io.atomix</groupId>
-    <artifactId>atomix-all</artifactId>
-    <version>1.0.8</version>
-</dependency>
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-core</artifactId>
+            <version>0.8</version>
+        </dependency>
 
-<dependency>
-    <groupId>com.hazelcast</groupId>
-    <artifactId>hazelcast</artifactId>
-    <version>3.8.5</version>
-</dependency>
+        <dependency>
+            <groupId>org.capnproto</groupId>
+            <artifactId>runtime</artifactId>
+            <version>0.1.1</version>
+        </dependency>
 
-<!--
-<dependency>
-      <groupId>org.gigaspaces</groupId>
-      <artifactId>xap-openspaces</artifactId>
-      <version>12.0.0</version>
-  </dependency> -->
-  
-  <!-- TODO - find where this sucker is hosted
-  <dependency>
-      <groupId>com.gigaspaces.util</groupId>
-      <artifactId>collections-core</artifactId>
-      <version>1.0</version>
-  </dependency>-->
+        <dependency>
+            <groupId>com.github.davidmoten</groupId>
+            <artifactId>flatbuffers-java</artifactId>
+            <version>1.7.0.1</version>
+        </dependency>
 
-<dependency>
-    <groupId>co.paralleluniverse</groupId>
-    <artifactId>quasar-core</artifactId>
-    <version>0.7.9</version>
-</dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>1.8.2</version>
+        </dependency>
 
-<dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.ignite</groupId>
+            <artifactId>ignite-core</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.atomix</groupId>
+            <artifactId>atomix-all</artifactId>
+            <version>1.0.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+            <version>3.8.5</version>
+        </dependency>
+
+        <!--
+        <dependency>
+              <groupId>org.gigaspaces</groupId>
+              <artifactId>xap-openspaces</artifactId>
+              <version>12.0.0</version>
+          </dependency> -->
+
+        <!-- TODO - find where this sucker is hosted
+        <dependency>
+            <groupId>com.gigaspaces.util</groupId>
+            <artifactId>collections-core</artifactId>
+            <version>1.0</version>
+        </dependency>-->
+
+        <dependency>
+            <groupId>co.paralleluniverse</groupId>
+            <artifactId>quasar-core</artifactId>
+            <version>0.7.9</version>
+        </dependency>
+
+        <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>zero-allocation-hashing</artifactId>
             <version>0.6</version>
         </dependency>
 
-<dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
-      <version>1.0.13</version>
-    </dependency>
+<!--        <dependency>-->
+<!--            <groupId>ch.qos.logback</groupId>-->
+<!--            <artifactId>logback-core</artifactId>-->
+<!--            <version>1.0.13</version>-->
+<!--        </dependency>-->
 
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>1.0.13</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.jocl</groupId>
-      <artifactId>jocl</artifactId>
-      <version>2.0.0</version>
-    </dependency>
+<!--        <dependency>-->
+<!--            <groupId>ch.qos.logback</groupId>-->
+<!--            <artifactId>logback-classic</artifactId>-->
+<!--            <version>1.0.13</version>-->
+<!--        </dependency>-->
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jocl</groupId>
+            <artifactId>jocl</artifactId>
+            <version>2.0.0</version>
+        </dependency>
     </dependencies>
 
 </project>
