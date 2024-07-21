@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option java_package = "net.opentsdb.atlas";
+
+message Datapoint {
+  map<string, string> tags = 1;
+  uint64 timestamp = 2;
+  double value = 3;
+  optional int64 step = 4;
+}
+
+message Datapoints {
+  repeated Datapoint datapoints = 1;
+  map<string, string> tags = 2;
+}

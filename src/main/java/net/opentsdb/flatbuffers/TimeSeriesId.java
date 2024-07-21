@@ -50,7 +50,7 @@ public final class TimeSeriesId extends Table {
       int aggregated_tag_values,
       int disjoint_tags,
       int disjoing_tag_values) {
-    builder.startObject(9);
+    //builder.startObject(9);
     TimeSeriesId.addDisjoingTagValues(builder, disjoing_tag_values);
     TimeSeriesId.addDisjointTags(builder, disjoint_tags);
     TimeSeriesId.addAggregatedTagValues(builder, aggregated_tag_values);
@@ -63,7 +63,9 @@ public final class TimeSeriesId extends Table {
     return TimeSeriesId.endTimeSeriesId(builder);
   }
 
-  public static void startTimeSeriesId(FlatBufferBuilder builder) { builder.startObject(9); }
+  public static void startTimeSeriesId(FlatBufferBuilder builder) {
+    //builder.startObject(9);
+  }
   public static void addAlias(FlatBufferBuilder builder, int aliasOffset) { builder.addOffset(0, aliasOffset, 0); }
   public static void addNamespaces(FlatBufferBuilder builder, int namespacesOffset) { builder.addOffset(1, namespacesOffset, 0); }
   public static int createNamespacesVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
@@ -90,7 +92,7 @@ public final class TimeSeriesId extends Table {
   public static int createDisjoingTagValuesVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
   public static void startDisjoingTagValuesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static int endTimeSeriesId(FlatBufferBuilder builder) {
-    int o = builder.endObject();
+    int o = 0;//builder.endObject();
     return o;
   }
   public static void finishTimeSeriesIdBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }

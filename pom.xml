@@ -10,13 +10,14 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jmh.version>1.19</jmh.version>
+        <jmh.version>1.37</jmh.version>
         <opentsdb.common.version>3.0.90-SNAPSHOT</opentsdb.common.version>
         <opentsdb.core.version>3.0.90-SNAPSHOT</opentsdb.core.version>
-        <javac.target>1.8</javac.target>
+        <javac.target>17</javac.target>
         <uberjar.name>benchmarks</uberjar.name>
-        <protobuf.version>3.0.0-beta-2</protobuf.version>
+        <protobuf.version>3.25.3</protobuf.version>
         <grpc.version>0.14.0</grpc.version>
+        <arrow.version>17.0.0</arrow.version>
     </properties>
 
     <build>
@@ -25,7 +26,7 @@
             <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
-                <version>1.4.1.Final</version>
+                <version>1.6.0</version>
             </extension>
 
             <extension>
@@ -67,7 +68,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>1.7</version>
@@ -92,8 +92,26 @@
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.5.0</version>
+                <version>0.6.1</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
+                    <additionalProtoPathElements>
+                        <additionalProtoPathElement>${project.basedir}/src/main/resources</additionalProtoPathElement>
+                    </additionalProtoPathElements>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                    <outputDirectory>
+                        ${project.build.directory}/generated-sources
+                    </outputDirectory>
+                </configuration>
+                <!--<configuration>
                     <protocExecutable>
                         ${project.build.directory}/protoc-${protobuf.version}-${os.detected.classifier}.exe
                     </protocExecutable>
@@ -101,11 +119,6 @@
                     <outputDirectory>
                         ${project.build.directory}/generated-sources
                     </outputDirectory>
-                    <!--
-          The version of protoc must match protobuf-java. If you don't depend on
-          protobuf-java directly, you will be transitively depending on the
-          protobuf-java version that grpc depends on.
-        -->
                     <protocArtifact>
                         com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
                     </protocArtifact>
@@ -130,11 +143,11 @@
                             <goal>compile-custom</goal>
                         </goals>
                         <configuration>
-                            <!-- If we leave this as the default, then GRPC will flush the pbuf classes! -->
                             <clearOutputDirectory>false</clearOutputDirectory>
                         </configuration>
                     </execution>
-                </executions>
+                </executions>-->
+
             </plugin>
 
             <plugin>
@@ -252,10 +265,10 @@
     </build>
 
     <repositories>
-        <repository>
-            <id>org.openspaces</id>
-            <url>http://Maven-repository.openspaces.org</url>
-        </repository>
+<!--        <repository>-->
+<!--            <id>org.openspaces</id>-->
+<!--            <url>http://Maven-repository.openspaces.org</url>-->
+<!--        </repository>-->
         <repository>
             <id>dependency-snapshots-repo</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
@@ -323,6 +336,27 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-handler</artifactId>
             <version>4.1.15.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-dataset</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-vector</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-memory-unsafe</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-compression</artifactId>
+            <version>${arrow.version}</version>
         </dependency>
 
         <dependency>
@@ -457,35 +491,77 @@
             <version>0.6</version>
         </dependency>
 
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.0.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.0.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.atlas_v1</groupId>
+            <artifactId>atlas-core_2.13</artifactId>
+            <version>1.8.0-rc.18</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.atlas_v1</groupId>
+            <artifactId>atlas-json_2.13</artifactId>
+            <version>1.8.0-rc.18</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.atlas_v1</groupId>
+            <artifactId>atlas-webapi_2.13</artifactId>
+            <version>1.8.0-rc.18</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-smile</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-scala_2.13</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+
 <!--        <dependency>-->
-<!--            <groupId>ch.qos.logback</groupId>-->
-<!--            <artifactId>logback-core</artifactId>-->
-<!--            <version>1.0.13</version>-->
+<!--            <groupId>org.apache.logging.log4j</groupId>-->
+<!--            <artifactId>log4j-core</artifactId>-->
+<!--            <version>2.17.1</version>-->
 <!--        </dependency>-->
 
 <!--        <dependency>-->
-<!--            <groupId>ch.qos.logback</groupId>-->
-<!--            <artifactId>logback-classic</artifactId>-->
-<!--            <version>1.0.13</version>-->
+<!--            <groupId>org.apache.logging.log4j</groupId>-->
+<!--            <artifactId>log4j-api</artifactId>-->
+<!--            <version>2.17.1</version>-->
 <!--        </dependency>-->
 
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.17.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.17.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.17.1</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.apache.logging.log4j</groupId>-->
+<!--            <artifactId>log4j-slf4j-impl</artifactId>-->
+<!--            <version>2.17.1</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>org.jocl</groupId>

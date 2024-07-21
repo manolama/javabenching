@@ -17,9 +17,9 @@ package net.opentsdb;
 
 import java.util.concurrent.TimeUnit;
 
+import net.opentsdb.atlas.AtlasParsing;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.profile.GCProfiler;
-import org.openjdk.jmh.profile.LinuxPerfProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -37,11 +37,20 @@ public class Benchmarks {
       //GroupByAndSum.runStreamedSerial(ctx, null);
       //GroupByAndSum.runTraditional(ctx, null);
       //GroupByAndSum.runRxParallel(ctx, null);
-      ObjectPools.Context ctx = new ObjectPools.Context();
-      ctx.setup();
-      ObjectPools.stormPotPool(ctx, null);
-      ctx.teardown();
-      System.out.println("DONE: " + DateTime.msFromNanoDiff(DateTime.nanoTime(), start));
+//      ObjectPools.Context ctx = new ObjectPools.Context();
+//      ctx.setup();
+//      ObjectPools.stormPotPool(ctx, null);
+//      ctx.teardown();
+
+//      LogOptimization.Context ctx = new LogOptimization.Context();
+      Blackhole bh = new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous.");
+//      for (int i = 0; i < 5; i++) {
+//        LogOptimization.stringParamDoubles(ctx, bh);
+//      }
+//      System.out.println("DONE: " + DateTime.msFromNanoDiff(DateTime.nanoTime(), start));
+
+      AtlasParsing.Context ctx = new AtlasParsing.Context();
+      AtlasParsing.atlasText(ctx, bh);
       return;
     }
     

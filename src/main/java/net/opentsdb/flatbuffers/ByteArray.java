@@ -19,17 +19,19 @@ public final class ByteArray extends Table {
 
   public static int createByteArray(FlatBufferBuilder builder,
       int bytearray) {
-    builder.startObject(1);
+    //builder.startObject(1);
     ByteArray.addBytearray(builder, bytearray);
     return ByteArray.endByteArray(builder);
   }
 
-  public static void startByteArray(FlatBufferBuilder builder) { builder.startObject(1); }
+  public static void startByteArray(FlatBufferBuilder builder) {
+    //builder.startObject(1);
+  }
   public static void addBytearray(FlatBufferBuilder builder, int bytearrayOffset) { builder.addOffset(0, bytearrayOffset, 0); }
   public static int createBytearrayVector(FlatBufferBuilder builder, byte[] data) { builder.startVector(1, data.length, 1); for (int i = data.length - 1; i >= 0; i--) builder.addByte(data[i]); return builder.endVector(); }
   public static void startBytearrayVector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }
   public static int endByteArray(FlatBufferBuilder builder) {
-    int o = builder.endObject();
+    int o = 0;//builder.endObject();
     return o;
   }
 };

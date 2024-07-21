@@ -3,14 +3,17 @@ This is a bunch of testing and scratch code to play with various Java'y bits to 
 
 It's built around JMH (for benchmarking) and JOL (to fetch class layout) so you can run it using the common JMH flags.
 
-E.g. ``mvn clean package && java -jar target/benchmarks.jar .*pipeline.* -f 1 -wi 5 -i 25 -tu ns -prof gc`` to run the TSDB pipeline tests.
+E.g. ``mvn clean package && java -jar target/benchmarks.jar '.*pipeline.*' -f 1 -wi 5 -i 25 -tu ns -prof gc`` to run the TSDB pipeline tests.
 
 Run ``java -jar target/benchmarks.jar -help`` to print out the various options available.
 
 A script is available ``tableit.py`` to convert the JMH output to a CSV that aligns the test results into columns instead of rows so it's easier to sort. To use it either dump the JMH run to a log file and then pipe that into the script or pipe the JMH run directly into the script. E.g.
 
-``mvn clean package && java -jar target/benchmarks.jar .*pipeline.* -f 1 -wi 5 -i 25 -tu ns -prof gc > gc.log``
+``mvn clean package && java -jar target/benchmarks.jar '.*pipeline.*' -f 1 -wi 5 -i 25 -tu ns -prof gc > gc.log``
 ``cat gc.log | python tableit.py --csv my.csv``
+
+For Arrow:
+`mvn clean package && java -Dlogback.configurationFile=logback.xml --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -jar target/benchmarks.jar '.*AtlasWrite.*' -f 1 -wi 2 -i 5 -w 2 -r 2 -tu s`
 
 ## Pipelines
 
@@ -23,7 +26,7 @@ OpenTSDB 3.x's new query pipeline must be as performant yet flexible as possible
   * Compute the difference of each data point for a time series from the standard deviation of that series. This entails a multi-pass iteration over all time chunks for a series to find the standard deviation, then a second pass applying that deviation.
   * Compute the sum of two metrics
 
-The important bits here are that the functions must be compossible (arranged in any order), support caching and multi-pass operations, and offer an API that's easy for developers to work with.
+The important bits here are that the functions must be composable (arranged in any order), support caching and multi-pass operations, and offer an API that's easy for developers to work with.
 
 For each pipeline, the following list describes the type of value returned in a time series object.
 

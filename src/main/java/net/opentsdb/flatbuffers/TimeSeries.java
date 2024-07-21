@@ -34,7 +34,7 @@ public final class TimeSeries extends Table {
       int payload,
       int timestamps,
       int values) {
-    builder.startObject(6);
+    //builder.startObject(6);
     TimeSeries.addBasetime(builder, basetime);
     TimeSeries.addValues(builder, values);
     TimeSeries.addTimestamps(builder, timestamps);
@@ -44,7 +44,9 @@ public final class TimeSeries extends Table {
     return TimeSeries.endTimeSeries(builder);
   }
 
-  public static void startTimeSeries(FlatBufferBuilder builder) { builder.startObject(6); }
+  public static void startTimeSeries(FlatBufferBuilder builder) {
+    //builder.startObject(6);
+  }
   public static void addId(FlatBufferBuilder builder, int idOffset) { builder.addOffset(0, idOffset, 0); }
   public static void addBasetime(FlatBufferBuilder builder, long basetime) { builder.addLong(1, basetime, 0); }
   public static void addEncoding(FlatBufferBuilder builder, int encoding) { builder.addInt(2, encoding, 0); }
@@ -58,7 +60,7 @@ public final class TimeSeries extends Table {
   public static int createValuesVector(FlatBufferBuilder builder, double[] data) { builder.startVector(8, data.length, 8); for (int i = data.length - 1; i >= 0; i--) builder.addDouble(data[i]); return builder.endVector(); }
   public static void startValuesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(8, numElems, 8); }
   public static int endTimeSeries(FlatBufferBuilder builder) {
-    int o = builder.endObject();
+    int o = 0;//builder.endObject();
     return o;
   }
 };

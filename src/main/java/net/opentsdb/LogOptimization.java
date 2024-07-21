@@ -12,7 +12,7 @@ import java.util.Random;
 
 /**
  * -Dlogback.configurationFile=logback.xml -XX:+UnlockDiagnosticVMOptions -XX:LogFile=jvm.log -XX:+PrintInlining -XX:+TraceClassLoading -XX:+PrintAssembly -XX:+LogCompilation -XX:+DebugNonSafepoints -XX:CompileThreshold=20
- * 
+ *
  */
 public class LogOptimization {
   static final Logger LOG = LoggerFactory.getLogger(LogOptimization.class);
